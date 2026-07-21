@@ -2,7 +2,7 @@
 
 **AI-Powered Smart Pharmacy & Prescription Management System**
 
-MediSync AI is an AI-assisted healthcare platform that simplifies prescription processing, medicine verification, inventory management, and pharmacy automation. The system combines AI-powered OCR with secure verification to improve healthcare accessibility, efficiency, and patient safety.
+MediSync AI is an AI-assisted healthcare platform that simplifies prescription processing, medicine verification, inventory management, and pharmacy automation. The platform combines AI-powered OCR with secure verification to improve healthcare accessibility, efficiency, and patient safety.
 
 ---
 
@@ -30,7 +30,7 @@ MediSync AI is an AI-assisted healthcare platform that simplifies prescription p
 - Doctor & Lab Admin Portal
 - Cloud Health Records
 - Online Payment Gateway
-- Automated Medicine Dispensing Machine
+- AI-Powered Smart Medicine Dispensing Machine
 
 ---
 
@@ -50,30 +50,44 @@ MediSync AI is an AI-assisted healthcare platform that simplifies prescription p
 ## Project Screenshots
 
 | Login | Sign Up |
-|------|------|
+|--------|---------|
 | ![](assets/login.png) | ![](assets/signup.png) |
 
 | Home | Prescription Scanner |
-|------|------|
+|------|----------------------|
 | ![](assets/home.png) | ![](assets/prescription-scan.png) |
 
 | Self-Care Assistant | Inventory |
-|------|------|
+|---------------------|-----------|
 | ![](assets/self-care.png) | ![](assets/inventory.png) |
 
-| AI Chatbot |
-|------|
-| ![](assets/chatbot.png) |
+---
+
+## AI Chatbot
+
+<p align="center">
+  <img src="assets/chatbot.png" width="320">
+</p>
+
+---
+
+## Smart Medicine Dispensing Machine (Concept)
+
+<p align="center">
+  <img src="assets/medisync-machine.png" width="700">
+</p>
+
+> **Note:** This image represents the conceptual design of the proposed AI-powered medicine dispensing kiosk. It illustrates the future hardware vision of the MediSync AI project.
 
 ---
 
 ## Project Documentation
 
-📄 **Project Proposal (PDF)**
+**Project Proposal (PDF)**
 
-[Download Project Proposal](docs/MediSync_AI_Project_proposal.pdf)
+📄 [Download Project Proposal](docs/MediSync_AI_Project_proposal.pdf)
 
-📘 **Detailed Project Documentation**
+**Detailed Project Documentation**
 
 https://docs.google.com/document/d/1_ZxrJnsKeNOnPCR0dzQb1bvX01qvqQLY0p1hypX6B6s/edit?usp=sharing
 
@@ -81,14 +95,16 @@ https://docs.google.com/document/d/1_ZxrJnsKeNOnPCR0dzQb1bvX01qvqQLY0p1hypX6B6s/
 
 ## Future Vision
 
-MediSync AI is designed to evolve into a complete AI-powered healthcare ecosystem by integrating:
+MediSync AI aims to become a complete AI-powered healthcare ecosystem by integrating:
 
 - Smart Pharmacy Automation
 - Robotic Medicine Dispensing
 - Doctor Appointment Management
-- Laboratory Test Booking
+- Pathology & Lab Test Booking
 - Digital Health Records
-- Cloud-based Healthcare Services
+- Medicine & Appointment Reminders
+- Cloud-Based Inventory Management
+- Secure Online Payments
 
 ---
 
