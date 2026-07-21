@@ -49,17 +49,21 @@ MediSync AI is an AI-assisted healthcare platform that simplifies prescription p
 
 ## Project Screenshots
 
+| Login | Sign Up |
+|------|------|
+| ![](assets/login.png) | ![](assets/signup.png) |
+
 | Home | Prescription Scanner |
 |------|------|
 | ![](assets/home.png) | ![](assets/prescription-scan.png) |
 
-| Inventory | AI Chatbot |
+| Self-Care Assistant | Inventory |
 |------|------|
-| ![](assets/inventory.png) | ![](assets/chatbot.png) |
+| ![](assets/self-care.png) | ![](assets/inventory.png) |
 
-| Login | Self-Care Assistant |
-|------|------|
-| ![](assets/login.png) | ![](assets/self-care.png) |
+| AI Chatbot |
+|------|
+| ![](assets/chatbot.png) |
 
 ---
 
