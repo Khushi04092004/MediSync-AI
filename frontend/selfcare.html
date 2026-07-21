@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self-Care Assistant — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <span class="eyebrow" data-i18n="selfcare_eyebrow"></span>
+  <h1 data-i18n="selfcare_title"></h1>
+  <p class="subtitle" data-i18n="selfcare_subtitle"></p>
+
+  <div class="card reveal">
+    <div class="field">
+      <label data-i18n="symptoms_label"></label>
+      <div class="chip-group" id="symptom-chips"></div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label data-i18n="age_label"></label>
+        <input type="number" id="age" placeholder="e.g. 28" min="0">
+      </div>
+      <div class="field">
+        <label data-i18n="weight_label"></label>
+        <input type="number" id="weight" placeholder="e.g. 60">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label data-i18n="allergy_label"></label>
+        <input type="text" id="allergy" data-i18n-placeholder="allergy_placeholder">
+      </div>
+      <div class="field">
+        <label data-i18n="bp_label"></label>
+        <select id="bp">
+          <option value="normal" data-i18n="bp_normal"></option>
+          <option value="high" data-i18n="bp_high"></option>
+          <option value="low" data-i18n="bp_low"></option>
+          <option value="unknown" data-i18n="bp_unknown"></option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label data-i18n="pregnancy_label"></label>
+        <select id="pregnancy"><option value="false" data-i18n="no"></option><option value="true" data-i18n="yes"></option></select>
+      </div>
+      <div class="field">
+        <label data-i18n="diabetes_label"></label>
+        <select id="diabetes"><option value="false" data-i18n="no"></option><option value="true" data-i18n="yes"></option></select>
+      </div>
+    </div>
+
+    <button id="submit-btn" data-i18n="get_recommendation_btn"></button>
+    <div id="loading" class="hidden mt-24 flex"><span class="spinner"></span> <span data-i18n="loading_selfcare"></span></div>
+  </div>
+
+  <div id="result-section" class="mt-24 hidden">
+    <div id="demo-banner" class="note-box hidden" style="margin-bottom:14px;"></div>
+    <div id="recommendations"></div>
+  </div>
+
+  <div id="verify-section" class="card mt-24 hidden">
+    <h3 data-i18n="verify_title"></h3>
+    <div id="verify-ladders"></div>
+    <button id="dispense-btn" class="mt-24" data-i18n="confirm_dispense_btn"></button>
+  </div>
+
+  <div id="dispense-section" class="card mt-24 hidden">
+    <h3 data-i18n="dispense_title"></h3>
+    <div id="dispense-log" class="mono" style="font-size:0.9rem; line-height:1.9;"></div>
+    <div id="label-box" class="hidden mt-24"></div>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+const SYMPTOMS = ["Headache", "Fever", "Vomiting", "Cold", "Cough", "Muscle Pain", "Acidity", "Diarrhea"];
+document.getElementById("symptom-chips").innerHTML = SYMPTOMS.map(s =>
+  `<div class="chip" data-symptom="${s}">${s}</div>`).join("");
+
+document.querySelectorAll(".chip[data-symptom]").forEach(chip => {
+  chip.addEventListener("click", () => chip.classList.toggle("selected"));
+});
+
+let currentMedicineName = null;
+
+document.getElementById("submit-btn").addEventListener("click", async () => {
+  const symptoms = [...document.querySelectorAll(".chip.selected")].map(c => c.dataset.symptom);
+  const age = parseInt(document.getElementById("age").value || "0");
+  if (symptoms.length === 0) { toast(t("select_symptom_error"), "error"); return; }
+  if (!age) { toast(t("enter_age_error"), "error"); return; }
+
+  const payload = {
+    symptoms,
+    age,
+    weight: parseFloat(document.getElementById("weight").value || "0") || null,
+    pregnancy: document.getElementById("pregnancy").value === "true",
+    allergy: document.getElementById("allergy").value || "none",
+    diabetes: document.getElementById("diabetes").value === "true",
+    blood_pressure: document.getElementById("bp").value,
+    language: currentLang(),
+  };
+
+  document.getElementById("loading").classList.remove("hidden");
+  document.getElementById("result-section").classList.add("hidden");
+  document.getElementById("verify-section").classList.add("hidden");
+  document.getElementById("dispense-section").classList.add("hidden");
+
+  try {
+    const data = await apiCall("/selfcare/recommend", { method: "POST", body: JSON.stringify(payload) });
+    renderRecommendations(data);
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    document.getElementById("loading").classList.add("hidden");
+  }
+});
+
+function renderRecommendations(data) {
+  const demoBanner = document.getElementById("demo-banner");
+  if (data.demo_mode) {
+    demoBanner.classList.remove("hidden");
+    demoBanner.textContent = "🧪 " + (data.note || "Demo mode active.");
+  } else {
+    demoBanner.classList.add("hidden");
+  }
+
+  const container = document.getElementById("recommendations");
+  const recs = data.recommendations || [];
+  container.innerHTML = recs.map((r) => {
+    const needsDoctor = (r.doctor_visit_required || "").toLowerCase().startsWith("yes");
+    return `
+    <div class="card mt-24">
+      <div class="flex-between">
+        <h3 style="margin:0;">${r.possible_cause}</h3>
+        ${needsDoctor ? `<span class="pill blocked">${t("doctor_visit_suggested")}</span>` : `<span class="pill safe">${t("otc_safe")}</span>`}
+      </div>
+      <table class="mt-24">
+        <tr><th>${t("th_medicine")}</th><td>${r.medicine}</td></tr>
+        <tr><th>${t("th_dosage_row")}</th><td>${r.dosage}</td></tr>
+        <tr><th>${t("th_precautions")}</th><td>${r.precautions}</td></tr>
+        <tr><th>${t("th_doctor_required")}</th><td>${r.doctor_visit_required}</td></tr>
+      </table>
+      ${!needsDoctor ? `<button class="mt-24" onclick="selectMedicine('${r.medicine.replace(/'/g, "\\'")}')">${t("verify_dispense_this")}</button>` : ""}
+    </div>`;
+  }).join("") || `<div class="card">${t("no_recommendation")}</div>`;
+
+  document.getElementById("result-section").classList.remove("hidden");
+}
+
+async function selectMedicine(medicineLabel) {
+  const nameGuess = medicineLabel.split(" ")[0];
+  currentMedicineName = nameGuess;
+  try {
+    const data = await apiCall("/verify", { method: "POST", body: JSON.stringify({ items: [{ name: nameGuess, quantity: 1 }] }) });
+    const container = document.getElementById("verify-ladders");
+    container.innerHTML = data.items.map(r => `
+      <div class="card" style="margin-bottom:14px;">
+        <div class="flex-between">
+          <strong>${r.medicine_name}</strong>
+          ${r.dispense_allowed ? '<span class="pill safe">✓ Allowed</span>' : '<span class="pill blocked">✕ Blocked</span>'}
+        </div>
+        ${renderLadder(r.steps)}
+      </div>
+    `).join("");
+    document.getElementById("verify-section").classList.remove("hidden");
+    document.getElementById("dispense-btn").disabled = !data.overall_dispense_allowed;
+    document.getElementById("verify-section").scrollIntoView({ behavior: "smooth" });
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+document.getElementById("dispense-btn").addEventListener("click", async () => {
+  if (!currentMedicineName) return;
+  const log = document.getElementById("dispense-log");
+  const section = document.getElementById("dispense-section");
+  section.classList.remove("hidden");
+  log.innerHTML = "";
+  const steps = ["Verifying...", "Medicine Found", "Checking Stock", "Opening Drawer...", "Dispensing...", "Printing Label..."];
+  for (const step of steps) {
+    log.innerHTML += `<div>&gt; ${step}</div>`;
+    await new Promise(r => setTimeout(r, 450));
+  }
+  try {
+    const data = await apiCall("/dispense", {
+      method: "POST",
+      body: JSON.stringify({ items: [{ name: currentMedicineName, quantity: 1 }], timing_note: "As suggested by Self-Care Assistant" })
+    });
+    log.innerHTML += `<div style="color:var(--safe);">&gt; Done. Drawers opened: ${data.drawers_opened.join(", ")}</div>`;
+    document.getElementById("label-box").classList.remove("hidden");
+    document.getElementById("label-box").innerHTML = `
+      <div class="card" style="background:var(--surface-sunken);">
+        <h3 style="margin-bottom:8px;">${t("label_title")}</h3>
+        <p class="mono" style="margin:0;">${data.label.medicines.join(", ")}</p>
+        <p style="margin-top:6px; color:var(--ink-soft);">${data.label.timing_note}</p>
+      </div>`;
+  } catch (err) {
+    log.innerHTML += `<div style="color:var(--blocked);">&gt; Blocked: ${err.message}</div>`;
+  }
+});
+</script>
+</body>
+</html>

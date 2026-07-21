@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan Prescription — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <span class="eyebrow" data-i18n="scan_eyebrow"></span>
+  <h1 data-i18n="scan_title"></h1>
+  <p class="subtitle" data-i18n="scan_subtitle"></p>
+
+  <div class="card reveal">
+    <div class="chip-group" style="margin-bottom:20px;">
+      <div class="chip selected" data-mode="pdf" data-i18n="mode_pdf"></div>
+      <div class="chip" data-mode="image" data-i18n="mode_image"></div>
+      <div class="chip" data-mode="qr" data-i18n="mode_qr"></div>
+      <div class="chip" data-mode="text" data-i18n="mode_text"></div>
+    </div>
+
+    <div id="pdf-panel">
+      <div class="upload-zone" id="pdf-drop">
+        <div style="font-size:1.6rem;">📄</div>
+        <p><strong data-i18n="upload_pdf_title"></strong><br><span style="color:var(--ink-soft); font-size:0.85rem;" data-i18n="upload_pdf_desc"></span></p>
+        <input type="file" id="pdf-input" accept="application/pdf" class="hidden">
+      </div>
+    </div>
+
+    <div id="image-panel" class="hidden">
+      <div class="upload-zone" id="image-drop">
+        <div style="font-size:1.6rem;">✍️</div>
+        <p><strong data-i18n="upload_image_title"></strong><br><span style="color:var(--ink-soft); font-size:0.85rem;" data-i18n="upload_image_desc"></span></p>
+        <input type="file" id="image-input" accept="image/*" class="hidden">
+      </div>
+      <img id="image-preview" class="hidden" style="max-width:200px; margin-top:14px; border-radius:8px;">
+    </div>
+
+    <div id="qr-panel" class="hidden">
+      <div class="upload-zone" id="qr-drop">
+        <div style="font-size:1.6rem;">▦</div>
+        <p><strong data-i18n="upload_qr_title"></strong><br><span style="color:var(--ink-soft); font-size:0.85rem;" data-i18n="upload_qr_desc"></span></p>
+        <input type="file" id="qr-input" accept="image/*" class="hidden">
+      </div>
+      <img id="qr-preview" class="hidden" style="max-width:200px; margin-top:14px; border-radius:8px;">
+    </div>
+
+    <div id="text-panel" class="hidden">
+      <div class="field">
+        <label data-i18n="text_label"></label>
+        <textarea id="text-input" rows="4" data-i18n-placeholder="text_placeholder"></textarea>
+      </div>
+      <button id="text-submit" data-i18n="analyze_btn"></button>
+    </div>
+
+    <div id="loading" class="hidden mt-24 flex">
+      <span class="spinner"></span> <span data-i18n="loading_scan"></span>
+    </div>
+  </div>
+
+  <div id="result-section" class="card mt-24 hidden">
+    <h3 data-i18n="result_title"></h3>
+    <div id="demo-banner" class="note-box hidden mt-24" style="margin-bottom:14px;"></div>
+    <table id="medicine-table">
+      <thead><tr>
+        <th data-i18n="th_name"></th><th data-i18n="th_dosage"></th>
+        <th data-i18n="th_frequency"></th><th data-i18n="th_duration"></th><th data-i18n="th_found"></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="confidence-box" class="mt-24"></div>
+
+    <div id="review-warning" class="warn-box hidden mt-24" data-i18n="review_warning"></div>
+
+    <div class="mt-24">
+      <button id="verify-btn" data-i18n="verify_dispense_btn"></button>
+    </div>
+  </div>
+
+  <div id="verify-section" class="card mt-24 hidden">
+    <h3 data-i18n="verify_title"></h3>
+    <div id="verify-ladders"></div>
+    <div class="mt-24">
+      <button id="dispense-btn" data-i18n="confirm_dispense_btn"></button>
+    </div>
+  </div>
+
+  <div id="dispense-section" class="card mt-24 hidden">
+    <h3 data-i18n="dispense_title"></h3>
+    <div id="dispense-log" class="mono" style="font-size:0.9rem; line-height:1.9;"></div>
+    <div id="label-box" class="hidden mt-24"></div>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+let currentMedicines = [];
+
+document.querySelectorAll(".chip[data-mode]").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".chip[data-mode]").forEach(c => c.classList.remove("selected"));
+    chip.classList.add("selected");
+    ["pdf", "image", "qr", "text"].forEach(m => {
+      document.getElementById(`${m}-panel`).classList.toggle("hidden", m !== chip.dataset.mode);
+    });
+  });
+});
+
+document.getElementById("pdf-drop").addEventListener("click", () => document.getElementById("pdf-input").click());
+document.getElementById("image-drop").addEventListener("click", () => document.getElementById("image-input").click());
+document.getElementById("qr-drop").addEventListener("click", () => document.getElementById("qr-input").click());
+
+document.getElementById("qr-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const preview = document.getElementById("qr-preview");
+  preview.src = URL.createObjectURL(file);
+  preview.classList.remove("hidden");
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("language", currentLang());
+  await runScan("/scan/qr", { method: "POST", body: formData });
+});
+
+document.getElementById("pdf-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("language", currentLang());
+  await runScan("/scan/pdf", { method: "POST", body: formData });
+});
+
+document.getElementById("image-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const preview = document.getElementById("image-preview");
+  preview.src = URL.createObjectURL(file);
+  preview.classList.remove("hidden");
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("language", currentLang());
+  await runScan("/scan/image", { method: "POST", body: formData });
+});
+
+document.getElementById("text-submit").addEventListener("click", async () => {
+  const text = document.getElementById("text-input").value.trim();
+  if (!text) { toast("Please enter text first", "error"); return; }
+  await runScan("/scan/text", { method: "POST", body: JSON.stringify({ text, language: currentLang() }) });
+});
+
+async function runScan(path, options) {
+  document.getElementById("loading").classList.remove("hidden");
+  document.getElementById("result-section").classList.add("hidden");
+  document.getElementById("verify-section").classList.add("hidden");
+  document.getElementById("dispense-section").classList.add("hidden");
+  try {
+    const data = await apiCall(path, options);
+    renderScanResult(data);
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    document.getElementById("loading").classList.add("hidden");
+  }
+}
+
+function renderScanResult(data) {
+  currentMedicines = data.medicines || [];
+  const tbody = document.querySelector("#medicine-table tbody");
+  tbody.innerHTML = currentMedicines.map(m => `
+    <tr>
+      <td>${m.name}</td>
+      <td>${m.dosage || "-"}</td>
+      <td>${m.frequency || "-"}</td>
+      <td>${m.duration || "-"}</td>
+      <td>${m.found_in_database ? '<span class="pill safe">✓</span>' : '<span class="pill blocked">✕</span>'}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="5" style="color:var(--ink-soft);">${t("no_medicines_extracted")}</td></tr>`;
+
+  const demoBanner = document.getElementById("demo-banner");
+  if (data.demo_mode) {
+    demoBanner.classList.remove("hidden");
+    demoBanner.textContent = "🧪 " + (data.note || "Demo mode active.");
+  } else {
+    demoBanner.classList.add("hidden");
+  }
+
+  const pct = Math.round((data.final_confidence || 0) * 100);
+  document.getElementById("confidence-box").innerHTML = `
+    <strong>${t("confidence_label")}</strong>
+    <span class="pill ${pct >= 60 ? "safe" : "blocked"}">${pct}%</span>
+  `;
+
+  document.getElementById("review-warning").classList.toggle("hidden", !data.needs_pharmacist_review);
+  document.getElementById("result-section").classList.remove("hidden");
+}
+
+document.getElementById("verify-btn").addEventListener("click", async () => {
+  if (currentMedicines.length === 0) { toast("Extract a medicine first", "error"); return; }
+  const items = currentMedicines.map(m => ({ name: m.name, quantity: 1 }));
+  try {
+    const data = await apiCall("/verify", { method: "POST", body: JSON.stringify({ items }) });
+    const container = document.getElementById("verify-ladders");
+    container.innerHTML = data.items.map(r => `
+      <div class="card" style="margin-bottom:14px;">
+        <div class="flex-between">
+          <strong>${r.medicine_name}</strong>
+          ${r.dispense_allowed ? '<span class="pill safe">✓ Allowed</span>' : '<span class="pill blocked">✕ Blocked</span>'}
+        </div>
+        ${renderLadder(r.steps)}
+      </div>
+    `).join("");
+    document.getElementById("verify-section").classList.remove("hidden");
+    document.getElementById("dispense-btn").disabled = !data.overall_dispense_allowed;
+    if (!data.overall_dispense_allowed) {
+      toast("Some medicines failed verification — dispensing blocked", "error");
+    }
+  } catch (err) {
+    toast(err.message, "error");
+  }
+});
+
+document.getElementById("dispense-btn").addEventListener("click", async () => {
+  const items = currentMedicines.map(m => ({ name: m.name, quantity: 1 }));
+  const log = document.getElementById("dispense-log");
+  const section = document.getElementById("dispense-section");
+  section.classList.remove("hidden");
+  log.innerHTML = "";
+  const steps = ["Verifying...", "Medicine Found", "Checking Stock", "Opening Drawer...", "Dispensing...", "Printing Label..."];
+  for (const step of steps) {
+    log.innerHTML += `<div>&gt; ${step}</div>`;
+    await new Promise(r => setTimeout(r, 450));
+  }
+  try {
+    const data = await apiCall("/dispense", {
+      method: "POST",
+      body: JSON.stringify({ items, timing_note: "As per prescription" })
+    });
+    log.innerHTML += `<div style="color:var(--safe);">&gt; Done. Drawers opened: ${data.drawers_opened.join(", ")}</div>`;
+    document.getElementById("label-box").classList.remove("hidden");
+    document.getElementById("label-box").innerHTML = `
+      <div class="card" style="background:var(--surface-sunken);">
+        <h3 style="margin-bottom:8px;">${t("label_title")}</h3>
+        <p class="mono" style="margin:0;">${data.label.medicines.join(", ")}</p>
+        <p style="margin-top:6px; color:var(--ink-soft);">${data.label.timing_note}</p>
+      </div>`;
+  } catch (err) {
+    log.innerHTML += `<div style="color:var(--blocked);">&gt; Blocked: ${err.message}</div>`;
+  }
+});
+</script>
+</body>
+</html>

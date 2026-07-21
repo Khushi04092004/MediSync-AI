@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medicine Inventory — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <span class="eyebrow" data-i18n="inventory_eyebrow"></span>
+  <h1 data-i18n="inventory_title"></h1>
+  <p class="subtitle" data-i18n="inventory_subtitle"></p>
+
+  <div class="grid-4" id="summary-cards" style="grid-template-columns: repeat(3, 1fr);"></div>
+
+  <div class="card mt-32 reveal">
+    <div class="flex-between">
+      <input type="text" id="search-input" data-i18n-placeholder="search_placeholder" style="max-width:320px;">
+      <button id="add-toggle-btn" data-i18n="add_medicine_btn"></button>
+    </div>
+
+    <div id="add-form" class="card hidden mt-24" style="background:var(--surface-sunken);">
+      <h3 data-i18n="add_form_title"></h3>
+      <div class="field-row">
+        <div class="field"><label data-i18n="name_label"></label><input id="f-name"></div>
+        <div class="field"><label data-i18n="generic_label"></label><input id="f-generic"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label data-i18n="brand_label"></label><input id="f-brand"></div>
+        <div class="field"><label data-i18n="strength_label"></label><input id="f-strength" placeholder="e.g. 500mg"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label data-i18n="category_label"></label><input id="f-category"></div>
+        <div class="field"><label data-i18n="type_label"></label>
+          <select id="f-type"><option value="OTC">OTC</option><option value="Prescription">Prescription</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label data-i18n="stock_label"></label><input type="number" id="f-stock" value="0"></div>
+        <div class="field"><label data-i18n="drawer_label"></label><input id="f-drawer" placeholder="e.g. A9"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label data-i18n="expiry_label"></label><input type="date" id="f-expiry"></div>
+        <div class="field"><label>Price (₹)</label><input type="number" id="f-price" value="0"></div>
+      </div>
+      <button id="save-medicine-btn" data-i18n="save_medicine_btn"></button>
+      <button class="secondary" id="cancel-add-btn" data-i18n="cancel_btn"></button>
+    </div>
+
+    <table class="mt-24">
+      <thead>
+        <tr>
+          <th data-i18n="th_name"></th><th data-i18n="th_generic"></th><th data-i18n="th_type"></th>
+          <th data-i18n="th_stock"></th><th data-i18n="th_drawer"></th><th data-i18n="th_expiry"></th><th></th>
+        </tr>
+      </thead>
+      <tbody id="medicine-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+async function loadSummary() {
+  const s = await apiCall("/inventory/summary");
+  document.getElementById("summary-cards").innerHTML = `
+    <div class="card stat"><div class="num">${s.total_stock_units}</div><div class="label">${t("stat_total_stock")}</div></div>
+    <div class="card stat"><div class="num" style="color:var(--caution);">${s.low_stock.length}</div><div class="label">${t("stat_low_stock")}</div></div>
+    <div class="card stat"><div class="num" style="color:var(--blocked);">${s.expired.length}</div><div class="label">${t("stat_expired")}</div></div>
+  `;
+}
+
+async function loadMedicines(search = "") {
+  const data = await apiCall(`/medicines?search=${encodeURIComponent(search)}`);
+  const tbody = document.getElementById("medicine-tbody");
+  const today = new Date().toISOString().slice(0, 10);
+
+  tbody.innerHTML = data.medicines.map(m => {
+    const expired = m.expiry_date && m.expiry_date < today;
+    const lowStock = m.stock < 10;
+    return `
+    <tr>
+      <td><strong>${m.name}</strong><br><span style="color:var(--ink-soft); font-size:0.8rem;">${m.brand || ""}</span></td>
+      <td>${m.generic_name || "-"}</td>
+      <td><span class="pill ${m.otc_or_prescription === "OTC" ? "safe" : "caution"}">${m.otc_or_prescription}</span></td>
+      <td>
+        <input type="number" value="${m.stock}" data-id="${m.id}" class="stock-input mono" style="width:80px; padding:6px 8px;">
+        ${lowStock ? `<span class="pill caution" style="margin-left:6px;">${t("low_pill")}</span>` : ""}
+      </td>
+      <td class="mono">${m.drawer_number || "-"}</td>
+      <td class="mono">${m.expiry_date || "-"} ${expired ? `<span class="pill blocked">${t("expired_pill")}</span>` : ""}</td>
+      <td><button class="secondary danger-btn" data-id="${m.id}" data-i18n="delete_btn"></button></td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="7" style="color:var(--ink-soft);">${t("no_medicines_found")}</td></tr>`;
+
+  document.querySelectorAll(".stock-input").forEach(input => {
+    input.addEventListener("change", async () => {
+      try {
+        await apiCall(`/medicines/${input.dataset.id}`, { method: "PUT", body: JSON.stringify({ stock: parseInt(input.value) }) });
+        toast(t("stock_updated"));
+        loadSummary();
+      } catch (err) { toast(err.message, "error"); }
+    });
+  });
+
+  document.querySelectorAll(".danger-btn").forEach(btn => {
+    btn.textContent = t("delete_btn");
+    btn.addEventListener("click", async () => {
+      if (!confirm(t("confirm_delete"))) return;
+      await apiCall(`/medicines/${btn.dataset.id}`, { method: "DELETE" });
+      loadMedicines(document.getElementById("search-input").value);
+      loadSummary();
+    });
+  });
+}
+
+document.getElementById("search-input").addEventListener("input", (e) => loadMedicines(e.target.value));
+
+document.getElementById("add-toggle-btn").addEventListener("click", () => document.getElementById("add-form").classList.remove("hidden"));
+document.getElementById("cancel-add-btn").addEventListener("click", () => document.getElementById("add-form").classList.add("hidden"));
+
+document.getElementById("save-medicine-btn").addEventListener("click", async () => {
+  const payload = {
+    name: document.getElementById("f-name").value,
+    generic_name: document.getElementById("f-generic").value,
+    brand: document.getElementById("f-brand").value,
+    strength: document.getElementById("f-strength").value,
+    category: document.getElementById("f-category").value,
+    otc_or_prescription: document.getElementById("f-type").value,
+    stock: parseInt(document.getElementById("f-stock").value || "0"),
+    drawer_number: document.getElementById("f-drawer").value,
+    expiry_date: document.getElementById("f-expiry").value,
+    price: parseFloat(document.getElementById("f-price").value || "0"),
+  };
+  if (!payload.name) { toast(t("name_required_error"), "error"); return; }
+  try {
+    await apiCall("/medicines", { method: "POST", body: JSON.stringify(payload) });
+    toast("Medicine added");
+    document.getElementById("add-form").classList.add("hidden");
+    loadMedicines();
+    loadSummary();
+  } catch (err) { toast(err.message, "error"); }
+});
+
+loadSummary();
+loadMedicines();
+</script>
+</body>
+</html>

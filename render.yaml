@@ -1,0 +1,24 @@
+# Render.com deployment config for MediSync AI
+# Push this repo to GitHub, then on Render.com choose "New +" -> "Blueprint"
+# and point it at your repo - Render will read this file automatically.
+#
+# NOTE (important limitation): Render's free tier filesystem is EPHEMERAL -
+# medisync.db will reset every time the service restarts or redeploys.
+# This is fine for a demo/portfolio deployment, but for anything real you'd
+# want to add a persistent disk (Render's paid "Disks" add-on) or migrate to
+# a hosted database like Render's free PostgreSQL.
+
+services:
+  - type: web
+    name: medisync-ai
+    env: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: ADMIN_SIGNUP_CODE
+        sync: false

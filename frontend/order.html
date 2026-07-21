@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Medicine Online — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <span class="eyebrow" data-i18n="order_eyebrow"></span>
+  <h1 data-i18n="order_title"></h1>
+  <p class="subtitle" data-i18n="order_subtitle"></p>
+
+  <div id="catalog-section">
+    <div class="flex-between">
+      <h3 data-i18n="catalog_title" style="margin:0;"></h3>
+      <input type="text" id="catalog-search" data-i18n-placeholder="search_placeholder" style="max-width:280px;">
+    </div>
+    <div class="catalog-grid mt-24" id="catalog-grid"></div>
+  </div>
+
+  <div class="card mt-32 reveal">
+    <h3 data-i18n="cart_title"></h3>
+    <div id="cart-items"></div>
+    <div id="cart-empty" class="note-box" data-i18n="empty_cart"></div>
+    <div id="cart-total" class="flex-between mt-24 hidden">
+      <strong id="cart-total-amount" class="mono" style="font-size:1.2rem;"></strong>
+      <button id="checkout-btn" data-i18n="checkout_btn"></button>
+    </div>
+  </div>
+
+  <div id="checkout-section" class="card mt-24 hidden">
+    <h3 data-i18n="checkout_title"></h3>
+    <div class="field">
+      <label data-i18n="address_label"></label>
+      <textarea id="address-input" rows="2" data-i18n-placeholder="address_placeholder"></textarea>
+    </div>
+
+    <div class="field">
+      <label data-i18n="payment_method_label"></label>
+      <div class="chip-group">
+        <div class="chip selected" data-method="COD">💵 <span data-i18n="payment_cod"></span></div>
+        <div class="chip" data-method="UPI">📲 <span data-i18n="payment_upi"></span></div>
+        <div class="chip" data-method="Card">💳 <span data-i18n="payment_card"></span></div>
+      </div>
+    </div>
+
+    <div id="upi-fields" class="field hidden">
+      <label data-i18n="upi_id_label"></label>
+      <input type="text" id="upi-input" data-i18n-placeholder="upi_id_placeholder">
+    </div>
+
+    <div id="card-fields" class="field hidden">
+      <label data-i18n="card_label"></label>
+      <input type="text" id="card-input" data-i18n-placeholder="card_placeholder" maxlength="19">
+    </div>
+
+    <div id="rx-upload-section" class="field hidden">
+      <label data-i18n="rx_upload_label"></label>
+      <p class="note-box" style="margin-bottom:10px;" data-i18n="rx_upload_note"></p>
+      <div class="upload-zone" id="rx-drop">
+        <div style="font-size:1.4rem;">📄</div>
+        <p style="margin:6px 0 0;" data-i18n="rx_upload_cta"></p>
+        <input type="file" id="rx-input" accept="image/*,application/pdf" class="hidden">
+      </div>
+      <div id="rx-status" class="mt-24 hidden"></div>
+    </div>
+
+    <button id="place-order-btn" data-i18n="place_order_btn"></button>
+    <div id="order-loading" class="hidden mt-24 flex"><span class="spinner"></span> <span data-i18n="placing_order"></span></div>
+  </div>
+
+  <div id="order-verify-section" class="card mt-24 hidden">
+    <h3 data-i18n="order_verify_title"></h3>
+    <div id="order-verify-ladders"></div>
+  </div>
+
+  <div id="order-success-section" class="card mt-24 hidden">
+    <h3 data-i18n="order_placed_title"></h3>
+    <p><span data-i18n="order_id_label"></span>: <strong class="mono" id="order-id-display"></strong> &nbsp;|&nbsp; <span data-i18n="total_label"></span>: <strong class="mono" id="order-total-display"></strong> &nbsp;|&nbsp; <span data-i18n="payment_status_label"></span>: <strong class="mono" id="order-payment-display"></strong></p>
+
+    <h3 class="mt-32" data-i18n="tracking_title"></h3>
+    <div class="tracking" id="tracking-timeline"></div>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+let catalog = [];
+let cart = {}; // { medicineName: { name, price, quantity, stock } }
+let currentOrderId = null;
+let trackingInterval = null;
+let selectedPaymentMethod = "COD";
+let prescriptionMedicineNames = [];
+let rxVerified = false;
+
+const STATUS_KEYS = ["status_placed", "status_verified", "status_packed", "status_out_for_delivery", "status_delivered"];
+const STATUS_VALUES = ["Placed", "Verified", "Packed", "Out for Delivery", "Delivered"];
+
+async function loadCatalog(search = "") {
+  const data = await apiCall(`/catalog?search=${encodeURIComponent(search)}`);
+  catalog = data.catalog;
+  renderCatalog();
+}
+
+function renderCatalog() {
+  const grid = document.getElementById("catalog-grid");
+  grid.innerHTML = catalog.map(m => {
+    const outOfStock = m.stock <= 0;
+    const needsRx = m.otc_or_prescription === "Prescription";
+    return `
+    <div class="product-card reveal">
+      <div class="flex-between">
+        <strong>${m.name}</strong>
+        <span class="pill ${needsRx ? "caution" : "safe"}">${m.otc_or_prescription}</span>
+      </div>
+      <span style="color:var(--ink-soft); font-size:0.85rem;">${m.brand || ""} • ${m.strength || ""}</span>
+      ${needsRx ? `<span style="color:var(--caution); font-size:0.78rem;">⚠ ${t("prescription_required_note")}</span>` : ""}
+      <span class="price">₹${m.price}</span>
+      <button ${outOfStock ? "disabled" : ""} onclick="addToCart('${m.name.replace(/'/g, "\\'")}')">
+        ${outOfStock ? t("out_of_stock") : t("add_to_cart_btn")}
+      </button>
+    </div>`;
+  }).join("");
+  initTiltEffect();
+}
+
+function addToCart(name) {
+  const medicine = catalog.find(m => m.name === name);
+  if (!medicine) return;
+  if (!cart[name]) {
+    cart[name] = { name: medicine.name, price: medicine.price, quantity: 0, stock: medicine.stock };
+  }
+  cart[name].quantity += 1;
+  renderCart();
+  toast(`${name} added to cart`);
+}
+
+function changeQty(name, delta) {
+  if (!cart[name]) return;
+  cart[name].quantity += delta;
+  if (cart[name].quantity <= 0) delete cart[name];
+  renderCart();
+}
+
+function renderCart() {
+  const items = Object.values(cart);
+  const container = document.getElementById("cart-items");
+  const emptyBox = document.getElementById("cart-empty");
+  const totalBox = document.getElementById("cart-total");
+
+  if (items.length === 0) {
+    container.innerHTML = "";
+    emptyBox.classList.remove("hidden");
+    totalBox.classList.add("hidden");
+    return;
+  }
+
+  emptyBox.classList.add("hidden");
+  totalBox.classList.remove("hidden");
+
+  container.innerHTML = items.map(item => `
+    <div class="cart-row">
+      <span>${item.name}</span>
+      <div class="qty-control">
+        <button class="secondary" onclick="changeQty('${item.name.replace(/'/g, "\\'")}', -1)">−</button>
+        <span class="mono">${item.quantity}</span>
+        <button class="secondary" onclick="changeQty('${item.name.replace(/'/g, "\\'")}', 1)">+</button>
+        <span class="mono" style="min-width:60px; text-align:right;">₹${item.price * item.quantity}</span>
+      </div>
+    </div>
+  `).join("");
+
+  const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  document.getElementById("cart-total-amount").textContent = `${t("total_label")}: ₹${total}`;
+}
+
+document.getElementById("catalog-search").addEventListener("input", (e) => loadCatalog(e.target.value));
+
+document.getElementById("checkout-btn").addEventListener("click", () => {
+  document.getElementById("checkout-section").classList.remove("hidden");
+  const cartHasRx = Object.keys(cart).some(name => {
+    const med = catalog.find(m => m.name === name);
+    return med && med.otc_or_prescription === "Prescription";
+  });
+  document.getElementById("rx-upload-section").classList.toggle("hidden", !cartHasRx);
+  document.getElementById("checkout-section").scrollIntoView({ behavior: "smooth" });
+});
+
+document.getElementById("rx-drop").addEventListener("click", () => document.getElementById("rx-input").click());
+document.getElementById("rx-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const statusBox = document.getElementById("rx-status");
+  statusBox.classList.remove("hidden");
+  statusBox.innerHTML = `<div class="flex"><span class="spinner"></span> ${t("loading_scan")}</div>`;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("language", currentLang());
+  const endpoint = file.type === "application/pdf" ? "/scan/pdf" : "/scan/image";
+
+  try {
+    const data = await apiCall(endpoint, { method: "POST", body: formData });
+    prescriptionMedicineNames = (data.medicines || []).map(m => m.name);
+    rxVerified = prescriptionMedicineNames.length > 0;
+    statusBox.innerHTML = rxVerified
+      ? `<span class="pill safe">✓ ${t("rx_upload_success")}: ${prescriptionMedicineNames.join(", ")}</span>`
+      : `<span class="pill blocked">✕ ${t("rx_upload_failed")}</span>`;
+  } catch (err) {
+    rxVerified = false;
+    statusBox.innerHTML = `<span class="pill blocked">✕ ${err.message}</span>`;
+  }
+});
+
+document.querySelectorAll(".chip[data-method]").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".chip[data-method]").forEach(c => c.classList.remove("selected"));
+    chip.classList.add("selected");
+    selectedPaymentMethod = chip.dataset.method;
+    document.getElementById("upi-fields").classList.toggle("hidden", selectedPaymentMethod !== "UPI");
+    document.getElementById("card-fields").classList.toggle("hidden", selectedPaymentMethod !== "Card");
+  });
+});
+
+document.getElementById("place-order-btn").addEventListener("click", async () => {
+  const items = Object.values(cart).map(i => ({ name: i.name, quantity: i.quantity }));
+  const address = document.getElementById("address-input").value.trim();
+
+  if (items.length === 0) { toast(t("cart_empty_error"), "error"); return; }
+  if (!address) { toast(t("address_required_error"), "error"); return; }
+
+  const rxSectionVisible = !document.getElementById("rx-upload-section").classList.contains("hidden");
+  if (rxSectionVisible && !rxVerified) {
+    toast(t("rx_upload_required_error"), "error");
+    return;
+  }
+
+  document.getElementById("order-loading").classList.remove("hidden");
+  document.getElementById("order-verify-section").classList.add("hidden");
+  document.getElementById("order-success-section").classList.add("hidden");
+
+  try {
+    const data = await apiCall("/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        items,
+        address,
+        payment_method: selectedPaymentMethod,
+        card_number: document.getElementById("card-input").value || "",
+        upi_id: document.getElementById("upi-input").value || "",
+        prescription_medicine_names: prescriptionMedicineNames,
+      }),
+    });
+    renderVerification(data.verification);
+    startOrderSuccess(data.order);
+  } catch (err) {
+    if (err.data?.detail?.verification) renderVerification(err.data.detail.verification);
+    toast(err.message, "error");
+  } finally {
+    document.getElementById("order-loading").classList.add("hidden");
+  }
+});
+
+function renderVerification(verification) {
+  const container = document.getElementById("order-verify-ladders");
+  container.innerHTML = verification.items.map(r => `
+    <div class="card" style="margin-bottom:14px;">
+      <div class="flex-between">
+        <strong>${r.medicine_name}</strong>
+        ${r.dispense_allowed ? '<span class="pill safe">✓ Allowed</span>' : '<span class="pill blocked">✕ Blocked</span>'}
+      </div>
+      ${renderLadder(r.steps)}
+    </div>
+  `).join("");
+  document.getElementById("order-verify-section").classList.remove("hidden");
+}
+
+function startOrderSuccess(order) {
+  currentOrderId = order.id;
+  document.getElementById("order-id-display").textContent = "#" + order.id;
+  document.getElementById("order-total-display").textContent = "₹" + order.total_amount;
+  document.getElementById("order-payment-display").textContent = order.payment_status;
+  document.getElementById("order-success-section").classList.remove("hidden");
+  document.getElementById("order-success-section").scrollIntoView({ behavior: "smooth" });
+
+  cart = {};
+  prescriptionMedicineNames = [];
+  rxVerified = false;
+  renderCart();
+  loadCatalog(document.getElementById("catalog-search").value);
+
+  renderTracking(order.order_status);
+
+  if (trackingInterval) clearInterval(trackingInterval);
+  trackingInterval = setInterval(async () => {
+    const updated = await apiCall(`/orders/${currentOrderId}/advance`, { method: "POST" });
+    renderTracking(updated.order_status);
+    if (updated.order_status === "Delivered") clearInterval(trackingInterval);
+  }, 2500);
+}
+
+function renderTracking(status) {
+  const currentIndex = STATUS_VALUES.indexOf(status);
+  const container = document.getElementById("tracking-timeline");
+  container.innerHTML = STATUS_VALUES.map((s, i) => {
+    const cls = i < currentIndex ? "done" : (i === currentIndex ? "current" : "");
+    return `
+    <div class="tracking-step ${cls}">
+      <div class="dot">${i < currentIndex ? "✓" : i + 1}</div>
+      <span>${t(STATUS_KEYS[i])}</span>
+    </div>`;
+  }).join("");
+}
+
+loadCatalog();
+</script>
+</body>
+</html>

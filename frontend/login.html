@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log In — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body class="auth-body">
+<div class="auth-split">
+  <div class="auth-side-brand">
+    <div class="bg-blobs" id="auth-blobs"></div>
+    <div class="auth-side-content">
+      <div class="brand auth-brand"><span class="dot"></span> MediSync AI</div>
+      <h1 class="auth-side-title">AI-Powered Smart Pharmacy</h1>
+      <p class="auth-side-text">AI reads the prescription, the database verifies it, and medicine is only ever dispensed once every check passes.</p>
+      <div class="ladder auth-side-ladder">
+        <div class="ladder-step pass"><div class="node">✓</div><div class="content"><strong>Medicine Found</strong></div></div>
+        <div class="ladder-step pass"><div class="node">✓</div><div class="content"><strong>Stock Available</strong></div></div>
+        <div class="ladder-step pass"><div class="node">✓</div><div class="content"><strong>Expiry Valid</strong></div></div>
+        <div class="ladder-step pass"><div class="node">✓</div><div class="content"><strong>Human Confirmation</strong></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-side-form">
+    <button class="theme-toggle-btn auth-theme-btn" id="theme-toggle" type="button" title="Toggle theme">🌙</button>
+    <div class="auth-card-plain">
+      <h2 data-i18n="login_title"></h2>
+      <p class="subtitle" data-i18n="login_subtitle" style="margin-bottom:24px;"></p>
+
+      <div class="field">
+        <label data-i18n="email_label"></label>
+        <input type="email" id="email-input" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label data-i18n="password_label"></label>
+        <input type="password" id="password-input" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div id="error-box" class="warn-box hidden mt-24" style="margin-bottom:0;"></div>
+      <button id="login-btn" style="width:100%; margin-top:18px;" data-i18n="login_btn"></button>
+      <div id="login-loading" class="hidden mt-24 flex"><span class="spinner"></span> <span data-i18n="logging_in"></span></div>
+
+      <p class="auth-switch-line">
+        <span data-i18n="no_account_text"></span>
+        <a href="signup.html" data-i18n="signup_link"></a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="static/i18n.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // If already logged in, skip straight to the app
+  if (localStorage.getItem("medisync_token")) {
+    window.location.href = "index.html";
+    return;
+  }
+  applyTranslations();
+  const theme = localStorage.getItem("medisync_theme") || "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  document.getElementById("theme-toggle").textContent = theme === "dark" ? "☀️" : "🌙";
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+    const newTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    localStorage.setItem("medisync_theme", newTheme);
+    document.documentElement.setAttribute("data-theme", newTheme);
+    document.getElementById("theme-toggle").textContent = newTheme === "dark" ? "☀️" : "🌙";
+  });
+  document.getElementById("auth-blobs").innerHTML = `<div class="blob blob-a"></div><div class="blob blob-b"></div><div class="blob blob-c"></div>`;
+});
+
+function showError(message) {
+  const box = document.getElementById("error-box");
+  box.textContent = message;
+  box.classList.remove("hidden");
+}
+
+document.getElementById("login-btn").addEventListener("click", async () => {
+  const email = document.getElementById("email-input").value.trim();
+  const password = document.getElementById("password-input").value;
+  document.getElementById("error-box").classList.add("hidden");
+  if (!email || !password) { showError(t("fill_all_fields_error")); return; }
+
+  document.getElementById("login-loading").classList.remove("hidden");
+  document.getElementById("login-btn").disabled = true;
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Login failed");
+    localStorage.setItem("medisync_token", data.token);
+    localStorage.setItem("medisync_user", JSON.stringify(data.user));
+    window.location.href = "index.html";
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    document.getElementById("login-loading").classList.add("hidden");
+    document.getElementById("login-btn").disabled = false;
+  }
+});
+
+document.getElementById("password-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("login-btn").click();
+});
+</script>
+</body>
+</html>

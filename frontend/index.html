@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <div class="hero-wrap">
+    <div class="bg-blobs"></div>
+    <div class="hero-content">
+      <span class="eyebrow" data-i18n="hero_eyebrow"></span>
+      <h1 data-i18n="hero_title"></h1>
+      <p class="subtitle" data-i18n="hero_subtitle"></p>
+    </div>
+  </div>
+
+  <div class="grid-4">
+    <a class="module-card reveal" href="scan.html">
+      <div class="icon">📷</div>
+      <h3 data-i18n="module_scan_title"></h3>
+      <p data-i18n="module_scan_desc"></p>
+    </a>
+    <a class="module-card reveal" href="selfcare.html">
+      <div class="icon">💊</div>
+      <h3 data-i18n="module_selfcare_title"></h3>
+      <p data-i18n="module_selfcare_desc"></p>
+    </a>
+    <a class="module-card reveal" href="order.html">
+      <div class="icon">🛒</div>
+      <h3 data-i18n="module_order_title"></h3>
+      <p data-i18n="module_order_desc"></p>
+    </a>
+    <a class="module-card reveal" href="inventory.html">
+      <div class="icon">📦</div>
+      <h3 data-i18n="module_inventory_title"></h3>
+      <p data-i18n="module_inventory_desc"></p>
+    </a>
+    <a class="module-card reveal" href="about.html">
+      <div class="icon">ℹ️</div>
+      <h3 data-i18n="module_about_title"></h3>
+      <p data-i18n="module_about_desc"></p>
+    </a>
+  </div>
+
+  <div class="card mt-32 reveal">
+    <h3 style="margin-bottom: 14px;" data-i18n="checklist_title"></h3>
+    <div class="ladder">
+      <div class="ladder-step pass">
+        <div class="node">✓</div>
+        <div class="content"><strong data-i18n="step_found"></strong><span data-i18n="step_found_desc"></span></div>
+      </div>
+      <div class="ladder-step pass">
+        <div class="node">✓</div>
+        <div class="content"><strong data-i18n="step_stock"></strong><span data-i18n="step_stock_desc"></span></div>
+      </div>
+      <div class="ladder-step pass">
+        <div class="node">✓</div>
+        <div class="content"><strong data-i18n="step_expiry"></strong><span data-i18n="step_expiry_desc"></span></div>
+      </div>
+      <div class="ladder-step pass">
+        <div class="node">✓</div>
+        <div class="content"><strong data-i18n="step_confirm"></strong><span data-i18n="step_confirm_desc"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+</body>
+</html>

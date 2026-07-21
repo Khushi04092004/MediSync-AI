@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <span class="eyebrow" data-i18n="about_eyebrow"></span>
+  <h1 data-i18n="about_title"></h1>
+  <p class="subtitle" data-i18n="about_subtitle"></p>
+
+  <div class="card reveal">
+    <h3 data-i18n="goal_title"></h3>
+    <p data-i18n="goal_text"></p>
+  </div>
+
+  <div class="card mt-24 reveal">
+    <h3 data-i18n="safety_title"></h3>
+    <div class="warn-box" data-i18n="safety_rule"></div>
+    <ul style="margin-top:16px; color:var(--ink-soft);">
+      <li data-i18n="rule1"></li>
+      <li data-i18n="rule2"></li>
+      <li data-i18n="rule3"></li>
+    </ul>
+  </div>
+
+  <div class="card mt-24 reveal">
+    <h3 data-i18n="workflow_title"></h3>
+    <div class="ladder">
+      <div class="ladder-step pass"><div class="node">1</div><div class="content"><strong data-i18n="wf1_title"></strong><span data-i18n="wf1_desc"></span></div></div>
+      <div class="ladder-step pass"><div class="node">2</div><div class="content"><strong data-i18n="wf2_title"></strong><span data-i18n="wf2_desc"></span></div></div>
+      <div class="ladder-step pass"><div class="node">3</div><div class="content"><strong data-i18n="wf3_title"></strong><span data-i18n="wf3_desc"></span></div></div>
+      <div class="ladder-step pass"><div class="node">4</div><div class="content"><strong data-i18n="wf4_title"></strong><span data-i18n="wf4_desc"></span></div></div>
+      <div class="ladder-step pass"><div class="node">5</div><div class="content"><strong data-i18n="wf5_title"></strong><span data-i18n="wf5_desc"></span></div></div>
+      <div class="ladder-step pass"><div class="node">6</div><div class="content"><strong data-i18n="wf6_title"></strong><span data-i18n="wf6_desc"></span></div></div>
+    </div>
+  </div>
+
+  <div class="card mt-24 reveal">
+    <div class="flex-between">
+      <h3 style="margin:0;" data-i18n="settings_title"></h3>
+      <span class="pill" id="gemini-status-pill"></span>
+    </div>
+    <p class="subtitle" style="margin-top:8px;" data-i18n="settings_desc"></p>
+  </div>
+
+  <div class="card mt-24 reveal">
+    <h3 data-i18n="tech_title"></h3>
+    <table>
+      <tr><th data-i18n="th_layer"></th><th data-i18n="th_technology"></th></tr>
+      <tr><td>Backend</td><td>Python + FastAPI</td></tr>
+      <tr><td>Database</td><td>SQLite</td></tr>
+      <tr><td>AI</td><td>Google Gemini (Vision + Text)</td></tr>
+      <tr><td>Frontend</td><td>HTML, CSS, JavaScript</td></tr>
+    </table>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+async function loadGeminiStatus() {
+  const s = await apiCall("/settings/gemini-status");
+  const pill = document.getElementById("gemini-status-pill");
+  if (s.connected) {
+    pill.className = "pill safe";
+    pill.textContent = t("status_connected");
+  } else {
+    pill.className = "pill caution";
+    pill.textContent = t("status_demo");
+  }
+}
+
+loadGeminiStatus();
+</script>
+</body>
+</html>
