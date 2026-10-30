@@ -86,6 +86,30 @@ MediSync AI is an AI-assisted healthcare platform that simplifies prescription p
 
 ---
 
+## Doctor Appointments & Specialist Directory
+
+<p align="center">
+  <img src="assets/appointments.png" width="700">
+</p>
+
+---
+
+## Digital Health Records (EHR) & AI Report Summarizer
+
+<p align="center">
+  <img src="assets/health-records.png" width="700">
+</p>
+
+---
+
+## Smart Medication Reminders & Dosage Schedules
+
+<p align="center">
+  <img src="assets/reminders.png" width="700">
+</p>
+
+---
+
 ## Project Documentation
 
 **Project Proposal (PDF)**
@@ -113,10 +137,7 @@ MediSync AI aims to become a complete AI-powered healthcare ecosystem by integra
 
 ---
 
-## Author
+## Contributors
 
-**Khushi Chandra**
-
-B.Tech – Computer Science & Engineering
-
-Motilal Nehru National Institute of Technology Allahabad
+- **Khushi Chandra** — B.Tech CSE, Motilal Nehru National Institute of Technology Allahabad
+- **Jyoti Meena** — B.Tech CSE, Motilal Nehru National Institute of Technology Allahabad
