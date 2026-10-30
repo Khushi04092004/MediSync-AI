@@ -58,14 +58,6 @@ MediSync AI is an AI-assisted healthcare platform that simplifies prescription p
 |---------------------|-----------|
 | ![](assets/self-care.png) | ![](assets/inventory.png) |
 
-| Doctor Appointments | Specialist Directory |
-|---------------------|----------------------|
-| ![](assets/appointments.png) | ![](assets/doctors.png) |
-
-| Digital Health Records | Smart Medication Reminders |
-|------------------------|---------------------------|
-| ![](assets/health-records.png) | ![](assets/reminders.png) |
-
 ---
 
 ## AI Chatbot
@@ -83,30 +75,6 @@ MediSync AI is an AI-assisted healthcare platform that simplifies prescription p
 </p>
 
 > **Note:** This image represents the conceptual design of the proposed AI-powered medicine dispensing kiosk. It illustrates the future hardware vision of the MediSync AI project.
-
----
-
-## Doctor Appointments & Specialist Directory
-
-<p align="center">
-  <img src="assets/appointments.png" width="700">
-</p>
-
----
-
-## Digital Health Records (EHR) & AI Report Summarizer
-
-<p align="center">
-  <img src="assets/health-records.png" width="700">
-</p>
-
----
-
-## Smart Medication Reminders & Dosage Schedules
-
-<p align="center">
-  <img src="assets/reminders.png" width="700">
-</p>
 
 ---
 
