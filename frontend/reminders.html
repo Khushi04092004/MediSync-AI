@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medication Reminders — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <div class="hero-wrap">
+    <div class="bg-blobs"></div>
+    <div class="hero-content">
+      <span class="eyebrow">Module 6</span>
+      <h1>Smart Medication Reminders</h1>
+      <p class="subtitle">Never miss a dose. Track daily medicine intake, monitor your adherence compliance score, and let Gemini AI schedule optimal dose timings.</p>
+    </div>
+  </div>
+
+  <div class="tabs-nav">
+    <button class="tab-btn active" data-tab="tab-today">⏰ Today's Doses</button>
+    <button class="tab-btn" data-tab="tab-manage">💊 My Medications & Alarms</button>
+    <button class="tab-btn" data-tab="tab-adherence">📈 Adherence Analytics</button>
+  </div>
+
+  <!-- TAB 1: Today's Doses -->
+  <div id="tab-today" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h3 style="margin: 0;">Today's Medication Schedule</h3>
+        <span id="today-date-label" style="font-size: 0.88rem; color: var(--ink-soft);"></span>
+      </div>
+      <button id="refresh-doses-btn" class="btn secondary" style="padding: 6px 12px; font-size: 13px;">🔄 Refresh</button>
+    </div>
+
+    <div id="today-doses-list">
+      <div class="card" style="text-align: center; padding: 40px;">
+        <span class="spinner" style="display:inline-block; margin-bottom: 12px;"></span>
+        <p>Loading today's schedule...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Manage Medications & Add New -->
+  <div id="tab-manage" class="tab-content hidden">
+    <!-- Add Medication Card -->
+    <div class="card reveal" style="margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <div>
+          <h3 style="margin: 0;">Set Up New Medication Alarm</h3>
+          <p style="color: var(--ink-soft); font-size: 0.88rem; margin: 4px 0 0 0;">
+            Add your prescription details. You can set times manually or use Gemini AI to find the optimal schedule.
+          </p>
+        </div>
+        <button id="ai-schedule-btn" type="button" class="btn" style="background: linear-gradient(135deg, var(--brand-mid), var(--safe)); font-size: 13px; padding: 8px 14px;">
+          ✨ AI Smart Schedule
+        </button>
+      </div>
+
+      <div id="ai-schedule-tips" class="hidden ai-summary-box" style="margin-bottom: 18px; padding: 14px;">
+        <div style="display: flex; justify-content: space-between;">
+          <strong style="color: var(--brand);">🤖 AI Recommended Timing:</strong>
+          <span id="ai-schedule-close" style="cursor: pointer; font-size: 14px;">✕</span>
+        </div>
+        <p id="ai-schedule-expl" style="font-size: 0.88rem; margin: 6px 0; color: var(--ink);"></p>
+        <ul id="ai-schedule-tips-list" style="margin: 4px 0 0 16px; font-size: 0.82rem; color: var(--ink-soft);"></ul>
+      </div>
+
+      <form id="add-medication-form">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Medicine Name</label>
+            <input type="text" id="med-name" placeholder="e.g. Amoxicillin, Paracetamol, Metformin" required style="width: 100%; margin: 0;">
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Dosage</label>
+            <input type="text" id="med-dosage" placeholder="e.g. 500mg, 1 tablet" style="width: 100%; margin: 0;">
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Frequency</label>
+            <select id="med-freq" style="width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); margin: 0;">
+              <option value="once_daily">Once Daily</option>
+              <option value="twice_daily" selected>Twice Daily</option>
+              <option value="thrice_daily">Three Times Daily</option>
+              <option value="four_times_daily">Four Times Daily</option>
+              <option value="as_needed">As Needed / SOS</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Start Date</label>
+            <input type="date" id="med-start" style="width: 100%; margin: 0;">
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">End Date (Optional)</label>
+            <input type="date" id="med-end" style="width: 100%; margin: 0;">
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Reminder Times (comma separated HH:MM)</label>
+            <input type="text" id="med-times" placeholder="09:00, 21:00" value="09:00, 21:00" required style="width: 100%; margin: 0;">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Intake Instructions (e.g. After food)</label>
+          <input type="text" id="med-instructions" placeholder="e.g. Take after breakfast and dinner with a glass of water" style="width: 100%; margin: 0;">
+        </div>
+
+        <button type="submit" id="save-med-btn" class="btn" style="padding: 10px 24px;">+ Save Medication Reminder</button>
+      </form>
+    </div>
+
+    <!-- Active Medications List -->
+    <h3 style="margin-bottom: 14px;">All Configured Medications</h3>
+    <div id="medications-list">
+      <p style="color: var(--ink-soft);">Loading configured medications...</p>
+    </div>
+  </div>
+
+  <!-- TAB 3: Adherence Analytics -->
+  <div id="tab-adherence" class="tab-content hidden">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="stat-pill reveal">
+        <div style="font-size: 28px;">🎯</div>
+        <div>
+          <div class="stat-value" id="adh-rate" style="color: var(--safe);">100%</div>
+          <div style="font-size: 0.85rem; color: var(--ink-soft);">Adherence Compliance</div>
+        </div>
+      </div>
+      <div class="stat-pill reveal">
+        <div style="font-size: 28px;">✅</div>
+        <div>
+          <div class="stat-value" id="adh-taken" style="color: var(--brand-mid);">0</div>
+          <div style="font-size: 0.85rem; color: var(--ink-soft);">Doses Taken On-Time</div>
+        </div>
+      </div>
+      <div class="stat-pill reveal">
+        <div style="font-size: 28px;">⏭️</div>
+        <div>
+          <div class="stat-value" id="adh-skipped" style="color: var(--blocked);">0</div>
+          <div style="font-size: 0.85rem; color: var(--ink-soft);">Doses Skipped</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+      <h3 style="margin-bottom: 8px;">Compliance Progress</h3>
+      <p style="font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 12px;">30-Day Medication Adherence Progress</p>
+      <div class="progress-track">
+        <div id="adh-progress-fill" class="progress-fill" style="width: 100%;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom: 14px;">Recent Intake Activity Log</h3>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--line); text-align: left;">
+              <th style="padding: 8px 12px;">Medicine</th>
+              <th style="padding: 8px 12px;">Scheduled Time</th>
+              <th style="padding: 8px 12px;">Action Taken</th>
+              <th style="padding: 8px 12px;">Logged At</th>
+            </tr>
+          </thead>
+          <tbody id="adh-history-tbody">
+            <tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--ink-soft);">Loading activity history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+let todayDoses = [];
+let allMedications = [];
+
+async function init() {
+  await requireAuthOrRedirect();
+  renderTopbar("reminders.html");
+  applyTranslations();
+  renderBgBlobs();
+
+  // Set default start date to today
+  document.getElementById("med-start").value = new Date().toISOString().split("T")[0];
+
+  // Tab switching
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).classList.remove("hidden");
+      if (btn.dataset.tab === "tab-adherence") loadAdherence();
+      if (btn.dataset.tab === "tab-manage") loadMedications();
+      if (btn.dataset.tab === "tab-today") loadTodayDoses();
+    });
+  });
+
+  document.getElementById("refresh-doses-btn").addEventListener("click", loadTodayDoses);
+  document.getElementById("add-medication-form").addEventListener("submit", handleAddMedication);
+  document.getElementById("ai-schedule-btn").addEventListener("click", handleAISchedule);
+  document.getElementById("ai-schedule-close").addEventListener("click", () => {
+    document.getElementById("ai-schedule-tips").classList.add("hidden");
+  });
+
+  // When frequency changes, adapt default times placeholder
+  document.getElementById("med-freq").addEventListener("change", (e) => {
+    const val = e.target.value;
+    const timesInput = document.getElementById("med-times");
+    if (val === "once_daily") timesInput.value = "09:00";
+    else if (val === "twice_daily") timesInput.value = "09:00, 21:00";
+    else if (val === "thrice_daily") timesInput.value = "08:00, 14:00, 20:00";
+    else if (val === "four_times_daily") timesInput.value = "08:00, 12:00, 16:00, 20:00";
+    else if (val === "as_needed") timesInput.value = "10:00";
+  });
+
+  await loadTodayDoses();
+}
+
+async function loadTodayDoses() {
+  const container = document.getElementById("today-doses-list");
+  try {
+    const res = await apiCall("/reminders/due");
+    todayDoses = res.doses || [];
+    document.getElementById("today-date-label").textContent = `Schedule for: ${res.today}`;
+
+    if (!todayDoses.length) {
+      container.innerHTML = `
+        <div class="card" style="text-align: center; padding: 48px 20px;">
+          <div style="font-size: 40px; margin-bottom: 12px;">🎉</div>
+          <h3>No Medication Doses for Today</h3>
+          <p style="color: var(--ink-soft); max-width: 420px; margin: 0 auto 16px;">
+            You have no active medications scheduled for today. Add your prescriptions in the 'My Medications' tab.
+          </p>
+          <button class="btn" onclick="document.querySelectorAll('.tab-btn')[1].click();" style="padding: 8px 18px;">+ Add Medication</button>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = todayDoses.map(d => {
+      let cardClass = d.status; // due, taken, skipped, upcoming
+      let statusBadge = "";
+      if (d.status === "taken") {
+        statusBadge = `<span class="badge-status confirmed">✓ Taken</span>`;
+      } else if (d.status === "skipped") {
+        statusBadge = `<span class="badge-status cancelled">✕ Skipped</span>`;
+      } else if (d.status === "due") {
+        statusBadge = `<span class="badge-status pending">⏰ Due Now</span>`;
+      } else {
+        statusBadge = `<span class="badge-status" style="background:var(--surface-sunken);">⏳ Upcoming</span>`;
+      }
+
+      return `
+        <div class="dose-card ${cardClass} reveal in-view">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="font-size: 28px; width: 50px; height: 50px; border-radius: 50%; background: var(--surface-sunken); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              💊
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <strong style="font-size: 1.1rem;">${escapeHtml(d.medicine_name)}</strong>
+                <span class="spec-tag">${escapeHtml(d.dosage || '1 dose')}</span>
+                ${statusBadge}
+              </div>
+              <div style="font-size: 0.88rem; color: var(--ink-soft); margin-top: 4px;">
+                <span>⏰ Scheduled: <strong>${d.reminder_time}</strong></span>
+                ${d.instructions ? ` &nbsp;•&nbsp; <span>${escapeHtml(d.instructions)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+            ${d.status !== "taken" ? `
+              <button class="btn take-btn" data-id="${d.medication_id}" data-time="${d.scheduled_datetime}" style="background: var(--safe); padding: 8px 16px; font-size: 13px;">
+                ✓ Take
+              </button>
+            ` : ''}
+            ${d.status !== "skipped" && d.status !== "taken" ? `
+              <button class="btn secondary skip-btn" data-id="${d.medication_id}" data-time="${d.scheduled_datetime}" style="padding: 8px 14px; font-size: 13px; color: var(--blocked); border-color: rgba(199,64,90,0.3);">
+                Skip
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    container.querySelectorAll(".take-btn").forEach(btn => {
+      btn.addEventListener("click", () => logAction(parseInt(btn.dataset.id), btn.dataset.time, "taken"));
+    });
+
+    container.querySelectorAll(".skip-btn").forEach(btn => {
+      btn.addEventListener("click", () => logAction(parseInt(btn.dataset.id), btn.dataset.time, "skip"));
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="card" style="color: var(--blocked);"><p>${err.message}</p></div>`;
+  }
+}
+
+async function logAction(medId, scheduledDt, action) {
+  try {
+    const endpoint = `/reminders/${medId}/${action === 'taken' ? 'taken' : 'skip'}`;
+    await apiCall(endpoint, {
+      method: "POST",
+      body: JSON.stringify({ scheduled_datetime: scheduledDt, action })
+    });
+    toast(`Dose recorded as ${action}!`, "info");
+    await loadTodayDoses();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function handleAISchedule() {
+  const medName = document.getElementById("med-name").value.trim();
+  const freq = document.getElementById("med-freq").value;
+  const inst = document.getElementById("med-instructions").value.trim();
+
+  if (!medName) {
+    toast("Please enter a medicine name first", "error");
+    document.getElementById("med-name").focus();
+    return;
+  }
+
+  const btn = document.getElementById("ai-schedule-btn");
+  btn.disabled = true;
+  btn.textContent = "Calculating...";
+
+  try {
+    const res = await apiCall("/reminders/ai-schedule", {
+      method: "POST",
+      body: JSON.stringify({
+        medicine_name: medName,
+        frequency: freq,
+        instructions: inst
+      })
+    });
+
+    if (res.times && res.times.length) {
+      document.getElementById("med-times").value = res.times.join(", ");
+    }
+
+    const tipsBox = document.getElementById("ai-schedule-tips");
+    tipsBox.classList.remove("hidden");
+    document.getElementById("ai-schedule-expl").textContent = res.explanation || "AI-optimized intake timings.";
+
+    const tipsList = document.getElementById("ai-schedule-tips-list");
+    if (res.tips && res.tips.length) {
+      tipsList.innerHTML = res.tips.map(t => `<li>${escapeHtml(t)}</li>`).join("");
+    } else {
+      tipsList.innerHTML = "";
+    }
+    toast("AI schedule populated!", "info");
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "✨ AI Smart Schedule";
+  }
+}
+
+async function handleAddMedication(e) {
+  e.preventDefault();
+  const name = document.getElementById("med-name").value.trim();
+  const dosage = document.getElementById("med-dosage").value.trim();
+  const freq = document.getElementById("med-freq").value;
+  const start = document.getElementById("med-start").value;
+  const end = document.getElementById("med-end").value;
+  const inst = document.getElementById("med-instructions").value.trim();
+  const timesStr = document.getElementById("med-times").value.trim();
+
+  const times = timesStr.split(",").map(s => s.trim()).filter(s => s.length > 0);
+  if (!times.length) {
+    toast("Please provide at least one reminder time (e.g. 09:00)", "error");
+    return;
+  }
+
+  const btn = document.getElementById("save-med-btn");
+  btn.disabled = true;
+
+  try {
+    await apiCall("/reminders", {
+      method: "POST",
+      body: JSON.stringify({
+        medicine_name: name,
+        dosage: dosage,
+        frequency: freq,
+        instructions: inst,
+        start_date: start,
+        end_date: end,
+        reminder_times: times
+      })
+    });
+
+    toast("Medication reminder added successfully!", "info");
+    document.getElementById("add-medication-form").reset();
+    document.getElementById("med-start").value = new Date().toISOString().split("T")[0];
+    document.getElementById("med-times").value = "09:00, 21:00";
+    document.getElementById("ai-schedule-tips").classList.add("hidden");
+
+    await loadMedications();
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadMedications() {
+  const container = document.getElementById("medications-list");
+  try {
+    const res = await apiCall("/reminders");
+    allMedications = res.medications || [];
+
+    if (!allMedications.length) {
+      container.innerHTML = `<p style="color: var(--ink-soft);">No medications added yet.</p>`;
+      return;
+    }
+
+    container.innerHTML = allMedications.map(m => {
+      const timesStr = (m.reminder_times || []).join(" • ");
+      const isPaused = m.is_paused === 1;
+
+      return `
+        <div class="card reveal in-view" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; opacity: ${isPaused ? 0.6 : 1};">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <strong style="font-size: 1.05rem;">${escapeHtml(m.medicine_name)}</strong>
+              <span class="spec-tag">${escapeHtml(m.dosage || '1 dose')}</span>
+              ${isPaused ? '<span class="badge-status cancelled">Paused</span>' : '<span class="badge-status confirmed">Active</span>'}
+            </div>
+            <div style="font-size: 0.85rem; color: var(--ink-soft); margin-top: 4px;">
+              <span>⏰ Times: <strong>${timesStr}</strong></span> &nbsp;•&nbsp;
+              <span>Frequency: ${m.frequency.replace('_', ' ')}</span> &nbsp;•&nbsp;
+              <span>From ${m.start_date} ${m.end_date ? 'to ' + m.end_date : '(ongoing)'}</span>
+            </div>
+            ${m.instructions ? `<div style="font-size: 0.82rem; margin-top: 4px; color: var(--ink);">Notes: ${escapeHtml(m.instructions)}</div>` : ''}
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn secondary pause-btn" data-id="${m.id}" style="padding: 6px 12px; font-size: 13px;">
+              ${isPaused ? 'Resume' : 'Pause'}
+            </button>
+            <button class="btn secondary delete-med-btn" data-id="${m.id}" style="padding: 6px 10px; font-size: 13px; color: var(--blocked); border-color: rgba(199,64,90,0.3);">
+              ✕
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    container.querySelectorAll(".pause-btn").forEach(btn => {
+      btn.addEventListener("click", () => handleTogglePause(parseInt(btn.dataset.id)));
+    });
+
+    container.querySelectorAll(".delete-med-btn").forEach(btn => {
+      btn.addEventListener("click", () => handleDeleteMedication(parseInt(btn.dataset.id)));
+    });
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--blocked);">${err.message}</p>`;
+  }
+}
+
+async function handleTogglePause(id) {
+  try {
+    const res = await apiCall(`/reminders/${id}/pause`, { method: "PUT" });
+    toast(res.message, "info");
+    await loadMedications();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function handleDeleteMedication(id) {
+  if (!confirm("Delete this medication and all its alarms?")) return;
+  try {
+    await apiCall(`/reminders/${id}`, { method: "DELETE" });
+    toast("Medication deleted", "info");
+    await loadMedications();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function loadAdherence() {
+  try {
+    const data = await apiCall("/reminders/adherence");
+    const rate = data.adherence_rate || 100;
+    document.getElementById("adh-rate").textContent = `${rate}%`;
+    document.getElementById("adh-taken").textContent = data.taken_count || 0;
+    document.getElementById("adh-skipped").textContent = data.skipped_count || 0;
+    document.getElementById("adh-progress-fill").style.width = `${rate}%`;
+
+    const tbody = document.getElementById("adh-history-tbody");
+    const logs = data.recent_logs || [];
+    if (!logs.length) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--ink-soft);">No activity logged yet. Mark doses taken or skipped on Today's Doses tab.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = logs.map(l => {
+      const isTaken = l.action === "taken";
+      const statusBadge = isTaken ? `<span class="badge-status confirmed">✓ Taken</span>` : `<span class="badge-status cancelled">✕ Skipped</span>`;
+      const loggedTime = l.logged_at ? l.logged_at.split("T")[0] + " " + l.logged_at.split("T")[1].substring(0, 5) : "N/A";
+
+      return `
+        <tr style="border-bottom: 1px solid var(--line);">
+          <td style="padding: 10px 12px;"><strong>${escapeHtml(l.medicine_name)}</strong> <span style="font-size:0.8rem; color:var(--ink-soft);">(${escapeHtml(l.dosage || '')})</span></td>
+          <td style="padding: 10px 12px;">${l.scheduled_datetime}</td>
+          <td style="padding: 10px 12px;">${statusBadge}</td>
+          <td style="padding: 10px 12px; font-size: 0.85rem; color: var(--ink-soft);">${loggedTime}</td>
+        </tr>
+      `;
+    }).join("");
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+init();
+</script>
+</body>
+</html>

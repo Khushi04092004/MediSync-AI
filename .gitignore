@@ -5,3 +5,6 @@ __pycache__/
 .env
 .DS_Store
 node_modules/
+backend/uploads/
+*.sqlite3
+.pytest_cache/

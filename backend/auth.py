@@ -28,6 +28,7 @@ from database import get_connection, row_to_dict
 
 SESSION_DURATION_DAYS = 7
 ADMIN_SIGNUP_CODE = os.getenv("ADMIN_SIGNUP_CODE", "").strip()
+DOCTOR_SIGNUP_CODE = os.getenv("DOCTOR_SIGNUP_CODE", "").strip()
 
 
 def _hash_password(password: str, salt: str) -> str:
@@ -44,7 +45,13 @@ def create_user(name: str, email: str, password: str, admin_code: str = "") -> d
 
     # An admin account is only created if the correct ADMIN_SIGNUP_CODE (set in .env) is provided.
     # Without it (or if ADMIN_SIGNUP_CODE isn't set in .env at all), every signup is a regular customer.
-    role = "admin" if (ADMIN_SIGNUP_CODE and admin_code == ADMIN_SIGNUP_CODE) else "customer"
+    # DOCTOR_SIGNUP_CODE works the same way for doctor accounts.
+    if ADMIN_SIGNUP_CODE and admin_code == ADMIN_SIGNUP_CODE:
+        role = "admin"
+    elif DOCTOR_SIGNUP_CODE and admin_code == DOCTOR_SIGNUP_CODE:
+        role = "doctor"
+    else:
+        role = "customer"
 
     salt = secrets.token_hex(16)
     password_hash = _hash_password(password, salt)
@@ -134,4 +141,12 @@ def require_admin(authorization: str = Header(None)) -> dict:
     current_user = require_auth(authorization)
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="This action requires an admin account.")
+    return current_user
+
+
+def require_doctor(authorization: str = Header(None)) -> dict:
+    """FastAPI dependency: requires the 'doctor' role."""
+    current_user = require_auth(authorization)
+    if current_user["role"] not in ("doctor", "admin"):
+        raise HTTPException(status_code=403, detail="This action requires a doctor account.")
     return current_user
