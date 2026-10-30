@@ -22,3 +22,5 @@ services:
         value: gemini-2.0-flash
       - key: ADMIN_SIGNUP_CODE
         sync: false
+      - key: DOCTOR_SIGNUP_CODE
+        sync: false

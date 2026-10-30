@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Appointments — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <div class="hero-wrap">
+    <div class="bg-blobs"></div>
+    <div class="hero-content">
+      <span class="eyebrow">Module 4</span>
+      <h1>My Consultations & Appointments</h1>
+      <p class="subtitle">Track confirmed visits, check status updates from your physician, and manage your upcoming healthcare schedules.</p>
+    </div>
+  </div>
+
+  <!-- Summary Stats -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    <div class="stat-pill reveal">
+      <div style="font-size: 26px;">📅</div>
+      <div>
+        <div class="stat-value" id="stat-total">0</div>
+        <div style="font-size: 0.85rem; color: var(--ink-soft);">Total Booked</div>
+      </div>
+    </div>
+    <div class="stat-pill reveal">
+      <div style="font-size: 26px;">⏳</div>
+      <div>
+        <div class="stat-value" id="stat-upcoming" style="color: var(--brand-mid);">0</div>
+        <div style="font-size: 0.85rem; color: var(--ink-soft);">Upcoming / Pending</div>
+      </div>
+    </div>
+    <div class="stat-pill reveal">
+      <div style="font-size: 26px;">✅</div>
+      <div>
+        <div class="stat-value" id="stat-completed" style="color: var(--safe);">0</div>
+        <div style="font-size: 0.85rem; color: var(--ink-soft);">Completed</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs & Actions -->
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px;">
+    <div class="tabs-nav" style="margin-bottom: 0;">
+      <button class="tab-btn active" data-filter="all">All Appointments</button>
+      <button class="tab-btn" data-filter="upcoming">Upcoming</button>
+      <button class="tab-btn" data-filter="completed">Completed</button>
+      <button class="tab-btn" data-filter="cancelled">Cancelled</button>
+    </div>
+    <a href="doctors.html" class="btn" style="padding: 8px 16px; font-size: 13px;">+ Book New Appointment</a>
+  </div>
+
+  <!-- Appointments List -->
+  <div id="appointments-container" style="display: flex; flex-direction: column; gap: 14px;">
+    <div class="card" style="text-align: center; padding: 40px;">
+      <span class="spinner" style="display:inline-block; margin-bottom: 12px;"></span>
+      <p>Loading your appointments...</p>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+let allAppointments = [];
+let currentFilter = "all";
+
+async function init() {
+  await requireAuthOrRedirect();
+  renderTopbar("appointments.html");
+  applyTranslations();
+  renderBgBlobs();
+  initScrollReveal();
+
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentFilter = btn.dataset.filter;
+      renderAppointments();
+    });
+  });
+
+  await loadAppointments();
+}
+
+async function loadAppointments() {
+  try {
+    const res = await apiCall("/appointments/my");
+    allAppointments = res.appointments || [];
+    updateStats();
+    renderAppointments();
+  } catch (err) {
+    document.getElementById("appointments-container").innerHTML = `
+      <div class="card" style="text-align: center; color: var(--blocked);">
+        <p>Could not load appointments: ${err.message}</p>
+      </div>
+    `;
+  }
+}
+
+function updateStats() {
+  document.getElementById("stat-total").textContent = allAppointments.length;
+  const today = new Date().toISOString().split("T")[0];
+  const upcoming = allAppointments.filter(a => (a.status === 'Pending' || a.status === 'Confirmed') && a.appointment_date >= today);
+  const completed = allAppointments.filter(a => a.status === 'Completed');
+  document.getElementById("stat-upcoming").textContent = upcoming.length;
+  document.getElementById("stat-completed").textContent = completed.length;
+}
+
+function renderAppointments() {
+  const container = document.getElementById("appointments-container");
+  const today = new Date().toISOString().split("T")[0];
+
+  let filtered = allAppointments;
+  if (currentFilter === "upcoming") {
+    filtered = allAppointments.filter(a => (a.status === 'Pending' || a.status === 'Confirmed') && a.appointment_date >= today);
+  } else if (currentFilter === "completed") {
+    filtered = allAppointments.filter(a => a.status === 'Completed');
+  } else if (currentFilter === "cancelled") {
+    filtered = allAppointments.filter(a => a.status === 'Cancelled');
+  }
+
+  if (!filtered.length) {
+    container.innerHTML = `
+      <div class="card" style="text-align: center; padding: 48px 20px;">
+        <div style="font-size: 40px; margin-bottom: 12px;">📅</div>
+        <h3>No Appointments Found</h3>
+        <p style="color: var(--ink-soft); max-width: 400px; margin: 0 auto 18px;">
+          ${currentFilter === 'all' ? "You haven't scheduled any doctor appointments yet." : `No appointments in the '${currentFilter}' category.`}
+        </p>
+        <a href="doctors.html" class="btn" style="padding: 8px 18px;">Browse Doctors & Book</a>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(a => {
+    const statusClass = a.status.toLowerCase();
+    const canCancel = a.status === "Pending" || a.status === "Confirmed";
+
+    return `
+      <div class="appointment-card reveal in-view">
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--surface-sunken); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            👨‍⚕️
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h3 style="margin: 0; font-size: 1.1rem;">${escapeHtml(a.doctor_name || "Specialist Doctor")}</h3>
+              <span class="spec-tag">${escapeHtml(a.specialization || "General")}</span>
+              <span class="badge-status ${statusClass}">● ${a.status}</span>
+            </div>
+            <div style="margin-top: 6px; font-size: 0.9rem; color: var(--ink-soft);">
+              <span>📅 Date: <strong>${a.appointment_date}</strong></span> &nbsp;•&nbsp;
+              <span>⏰ Time: <strong>${a.appointment_time}</strong></span> &nbsp;•&nbsp;
+              <span class="mono" style="font-size: 0.8rem; background: var(--surface-sunken); padding: 2px 6px; border-radius: 4px;">Ref: ${a.appointment_uid}</span>
+            </div>
+            ${a.reason ? `<div style="margin-top: 6px; font-size: 0.85rem; color: var(--ink);"><strong>Reason:</strong> ${escapeHtml(a.reason)}</div>` : ''}
+            ${a.notes ? `<div style="margin-top: 6px; font-size: 0.85rem; background: var(--safe-bg); color: var(--safe); padding: 6px 10px; border-radius: 6px;"><strong>Doctor's Note:</strong> ${escapeHtml(a.notes)}</div>` : ''}
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; justify-content: flex-end;">
+          <span style="font-weight: 600; color: var(--brand); font-size: 0.95rem;">₹${a.consultation_fee || 500}</span>
+          ${canCancel ? `<button class="btn secondary cancel-btn" data-id="${a.id}" style="color: var(--blocked); border-color: rgba(199,64,90,0.3); padding: 6px 12px; font-size: 13px;">Cancel</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  container.querySelectorAll(".cancel-btn").forEach(btn => {
+    btn.addEventListener("click", () => handleCancel(parseInt(btn.dataset.id)));
+  });
+}
+
+async function handleCancel(id) {
+  if (!confirm("Are you sure you want to cancel this appointment?")) return;
+  try {
+    await apiCall(`/appointments/${id}/cancel`, { method: "PUT" });
+    toast("Appointment cancelled successfully", "info");
+    await loadAppointments();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+init();
+</script>
+</body>
+</html>

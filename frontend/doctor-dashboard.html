@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doctor Portal — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <div class="hero-wrap">
+    <div class="bg-blobs"></div>
+    <div class="hero-content">
+      <span class="eyebrow">Doctor Practice Portal</span>
+      <h1>Doctor Management Dashboard</h1>
+      <p class="subtitle">Review patient appointments, confirm bookings, write consultation notes, and schedule your clinical availability slots.</p>
+    </div>
+  </div>
+
+  <div class="tabs-nav">
+    <button class="tab-btn active" data-tab="appointments-tab">📋 Patient Appointments</button>
+    <button class="tab-btn" data-tab="availability-tab">⏰ Availability Schedule</button>
+    <button class="tab-btn" data-tab="profile-tab">🩺 My Practice Profile</button>
+  </div>
+
+  <!-- Tab 1: Appointments -->
+  <div id="appointments-tab" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0;">Scheduled Consultations</h3>
+      <button id="refresh-appts-btn" class="btn secondary" style="padding: 6px 12px; font-size: 13px;">🔄 Refresh</button>
+    </div>
+    <div id="doctor-appts-list" style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="card" style="text-align: center; padding: 40px;">
+        <span class="spinner" style="display:inline-block; margin-bottom: 12px;"></span>
+        <p>Loading patient appointments...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 2: Availability -->
+  <div id="availability-tab" class="tab-content hidden">
+    <div class="card" style="margin-bottom: 24px;">
+      <h3>Add New Available Slot</h3>
+      <p style="color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 16px;">Patients will be able to book this time window on the Doctors page.</p>
+      <form id="add-slot-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; align-items: flex-end;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Date</label>
+          <input type="date" id="slot-date" required style="width: 100%; margin: 0;">
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Start Time</label>
+          <input type="time" id="slot-start" required style="width: 100%; margin: 0;">
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">End Time</label>
+          <input type="time" id="slot-end" required style="width: 100%; margin: 0;">
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Max Slots</label>
+          <input type="number" id="slot-max" min="1" max="10" value="1" style="width: 100%; margin: 0;">
+        </div>
+        <div>
+          <button type="submit" class="btn" style="width: 100%; padding: 10px;">+ Add Slot</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Active Availability Schedule</h3>
+      <div id="active-slots-container" class="slots-container" style="margin-top: 14px;">
+        <p style="color: var(--ink-soft); font-size: 0.9rem;">Loading slots...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Practice Profile -->
+  <div id="profile-tab" class="tab-content hidden">
+    <div class="card" style="max-width: 680px; margin: 0 auto;">
+      <h3 style="margin-bottom: 8px;">Doctor Profile Details</h3>
+      <p style="color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 20px;">Keep your credentials, consultation fee, and bio updated for prospective patients.</p>
+
+      <form id="doctor-profile-form">
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Specialization</label>
+          <input type="text" id="prof-spec" placeholder="e.g. Cardiologist, Dermatologist, General Physician" required style="width: 100%;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Qualifications</label>
+            <input type="text" id="prof-qual" placeholder="e.g. MBBS, MD, DM" required style="width: 100%;">
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Experience (Years)</label>
+            <input type="number" id="prof-exp" min="0" max="60" value="5" required style="width: 100%;">
+          </div>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Consultation Fee (₹)</label>
+          <input type="number" id="prof-fee" min="0" step="50" value="500" required style="width: 100%;">
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Practice Description / Bio</label>
+          <textarea id="prof-desc" rows="3" placeholder="Brief summary of your clinical experience and focus areas..." style="width: 100%;"></textarea>
+        </div>
+        <button type="submit" class="btn" style="padding: 10px 24px;">Save Profile</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Status Update Modal -->
+<div id="status-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 style="margin-top: 0;">Update Appointment Status</h3>
+    <p id="status-patient-name" style="font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 16px;"></p>
+
+    <div style="margin-bottom: 14px;">
+      <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Status</label>
+      <select id="modal-new-status" style="width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink);">
+        <option value="Confirmed">Confirmed</option>
+        <option value="Completed">Completed</option>
+        <option value="Cancelled">Cancelled</option>
+        <option value="Pending">Pending</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Doctor Notes / Prescription Summary</label>
+      <textarea id="modal-status-notes" rows="3" placeholder="e.g. Consult completed. Prescribed Amoxicillin 500mg. Follow-up in 1 week." style="width: 100%;"></textarea>
+    </div>
+
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button id="close-status-modal" class="btn secondary" type="button">Cancel</button>
+      <button id="save-status-btn" class="btn" type="button">Save Status</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+let currentDoctorProfile = null;
+let activeAppointmentId = null;
+
+async function init() {
+  await requireAuthOrRedirect();
+  const user = JSON.parse(localStorage.getItem("medisync_user") || "{}");
+  if (user.role !== "doctor" && user.role !== "admin") {
+    alert("Doctor Portal requires a doctor account. Please log in with a doctor account.");
+    window.location.href = "index.html";
+    return;
+  }
+
+  renderTopbar("doctor-dashboard.html");
+  applyTranslations();
+  renderBgBlobs();
+
+  // Tabs
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).classList.remove("hidden");
+    });
+  });
+
+  document.getElementById("refresh-appts-btn").addEventListener("click", loadDoctorAppointments);
+  document.getElementById("add-slot-form").addEventListener("submit", handleAddSlot);
+  document.getElementById("doctor-profile-form").addEventListener("submit", handleSaveProfile);
+  document.getElementById("close-status-modal").addEventListener("click", () => {
+    document.getElementById("status-modal").classList.add("hidden");
+  });
+  document.getElementById("save-status-btn").addEventListener("click", handleSaveStatus);
+
+  // Set min date for slot picker to today
+  document.getElementById("slot-date").min = new Date().toISOString().split("T")[0];
+
+  await loadDoctorProfile();
+  await loadDoctorAppointments();
+}
+
+async function loadDoctorProfile() {
+  try {
+    const res = await apiCall("/doctors/profile/me");
+    if (res.profile) {
+      currentDoctorProfile = res.profile;
+      document.getElementById("prof-spec").value = res.profile.specialization || "";
+      document.getElementById("prof-qual").value = res.profile.qualifications || "";
+      document.getElementById("prof-exp").value = res.profile.experience_years || 0;
+      document.getElementById("prof-fee").value = res.profile.consultation_fee || 500;
+      document.getElementById("prof-desc").value = res.profile.description || "";
+      await loadDoctorAvailability(res.profile.id);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function loadDoctorAvailability(doctorId) {
+  const container = document.getElementById("active-slots-container");
+  try {
+    const res = await apiCall(`/doctors/${doctorId}/availability`);
+    const slots = res.slots || [];
+    if (!slots.length) {
+      container.innerHTML = `<p style="color: var(--ink-soft); font-size: 0.9rem;">No upcoming availability slots added yet.</p>`;
+      return;
+    }
+    container.innerHTML = slots.map(s => `
+      <div class="slot-chip" style="display: inline-flex; align-items: center; gap: 8px;">
+        <span>📅 ${s.available_date} (${s.start_time} - ${s.end_time})</span>
+        <button class="delete-slot-btn" data-slot-id="${s.id}" style="background:none; border:none; color:var(--blocked); cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
+      </div>
+    `).join("");
+
+    container.querySelectorAll(".delete-slot-btn").forEach(btn => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const slotId = btn.dataset.slotId;
+        if (!confirm("Remove this slot?")) return;
+        try {
+          await apiCall(`/doctors/${doctorId}/availability/${slotId}`, { method: "DELETE" });
+          toast("Slot removed", "info");
+          await loadDoctorAvailability(doctorId);
+        } catch (err) {
+          toast(err.message, "error");
+        }
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--blocked); font-size: 0.9rem;">${err.message}</p>`;
+  }
+}
+
+async function handleAddSlot(e) {
+  e.preventDefault();
+  if (!currentDoctorProfile) {
+    toast("Please create your doctor profile first in the My Practice Profile tab.", "error");
+    return;
+  }
+  const date = document.getElementById("slot-date").value;
+  const start = document.getElementById("slot-start").value;
+  const end = document.getElementById("slot-end").value;
+  const max = parseInt(document.getElementById("slot-max").value) || 1;
+
+  if (start >= end) {
+    toast("End time must be after start time", "error");
+    return;
+  }
+
+  try {
+    await apiCall(`/doctors/${currentDoctorProfile.id}/availability`, {
+      method: "POST",
+      body: JSON.stringify({
+        available_date: date,
+        start_time: start,
+        end_time: end,
+        max_slots: max
+      })
+    });
+    toast("Availability slot added successfully!", "info");
+    document.getElementById("add-slot-form").reset();
+    document.getElementById("slot-max").value = "1";
+    await loadDoctorAvailability(currentDoctorProfile.id);
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function handleSaveProfile(e) {
+  e.preventDefault();
+  const spec = document.getElementById("prof-spec").value.trim();
+  const qual = document.getElementById("prof-qual").value.trim();
+  const exp = parseInt(document.getElementById("prof-exp").value) || 0;
+  const fee = parseFloat(document.getElementById("prof-fee").value) || 0;
+  const desc = document.getElementById("prof-desc").value.trim();
+
+  try {
+    await apiCall("/doctors/profile/me", {
+      method: "PUT",
+      body: JSON.stringify({
+        specialization: spec,
+        qualifications: qual,
+        experience_years: exp,
+        consultation_fee: fee,
+        description: desc
+      })
+    });
+    toast("Practice profile saved successfully!", "info");
+    await loadDoctorProfile();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function loadDoctorAppointments() {
+  const container = document.getElementById("doctor-appts-list");
+  try {
+    const res = await apiCall("/appointments/doctor");
+    const appts = res.appointments || [];
+    if (!appts.length) {
+      container.innerHTML = `
+        <div class="card" style="text-align: center; padding: 40px;">
+          <p style="color: var(--ink-soft);">No patient appointments scheduled yet.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = appts.map(a => {
+      const statusClass = a.status.toLowerCase();
+      return `
+        <div class="appointment-card reveal in-view">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h3 style="margin: 0; font-size: 1.1rem;">Patient: ${escapeHtml(a.patient_name)}</h3>
+              <span class="badge-status ${statusClass}">● ${a.status}</span>
+              <span class="mono" style="font-size: 0.8rem; background: var(--surface-sunken); padding: 2px 6px; border-radius: 4px;">${a.appointment_uid}</span>
+            </div>
+            <div style="font-size: 0.9rem; color: var(--ink-soft); margin-top: 6px;">
+              <span>📅 ${a.appointment_date}</span> &nbsp;•&nbsp;
+              <span>⏰ ${a.appointment_time}</span> &nbsp;•&nbsp;
+              <span>✉️ ${escapeHtml(a.patient_email || '')}</span>
+            </div>
+            ${a.reason ? `<div style="font-size: 0.85rem; margin-top: 6px;"><strong>Patient's Symptom / Reason:</strong> ${escapeHtml(a.reason)}</div>` : ''}
+            ${a.notes ? `<div style="font-size: 0.85rem; margin-top: 6px; background: var(--safe-bg); color: var(--safe); padding: 6px 10px; border-radius: 6px;"><strong>Consultation Notes:</strong> ${escapeHtml(a.notes)}</div>` : ''}
+          </div>
+          <div>
+            <button class="btn update-status-btn" data-id="${a.id}" data-name="${escapeHtml(a.patient_name)}" data-status="${a.status}" data-notes="${escapeHtml(a.notes || '')}" style="padding: 8px 14px; font-size: 13px;">Manage Status</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    container.querySelectorAll(".update-status-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        activeAppointmentId = parseInt(btn.dataset.id);
+        document.getElementById("status-patient-name").textContent = `Patient: ${btn.dataset.name}`;
+        document.getElementById("modal-new-status").value = btn.dataset.status;
+        document.getElementById("modal-status-notes").value = btn.dataset.notes;
+        document.getElementById("status-modal").classList.remove("hidden");
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="card" style="color: var(--blocked);"><p>${err.message}</p></div>`;
+  }
+}
+
+async function handleSaveStatus() {
+  if (!activeAppointmentId) return;
+  const status = document.getElementById("modal-new-status").value;
+  const notes = document.getElementById("modal-status-notes").value.trim();
+  const btn = document.getElementById("save-status-btn");
+  btn.disabled = true;
+
+  try {
+    await apiCall(`/appointments/${activeAppointmentId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status, notes })
+    });
+    toast("Appointment status updated to " + status, "info");
+    document.getElementById("status-modal").classList.add("hidden");
+    await loadDoctorAppointments();
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+init();
+</script>
+</body>
+</html>

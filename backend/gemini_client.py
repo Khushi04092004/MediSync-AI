@@ -252,3 +252,165 @@ RULES (never break these):
 
     reply_text = _call_gemini(parts)
     return {"demo_mode": False, "reply": reply_text.strip()}
+
+
+# ---------------------------------------------------------------------------
+# MODULE 9: Health Document Summarization (Feature 2)
+# ---------------------------------------------------------------------------
+def summarize_health_document_text(text: str, language: str = "en") -> dict:
+    if config.is_demo_mode():
+        return {
+            "document_type": "Medical Report (Demo)",
+            "patient_name": "Sample Patient",
+            "report_date": "Recent",
+            "key_findings": [
+                {"parameter": "Hemoglobin", "value": "13.2 g/dL", "status": "Normal"},
+                {"parameter": "Total Leukocyte Count", "value": "6,800 /mcL", "status": "Normal"},
+                {"parameter": "Platelet Count", "value": "250,000 /mcL", "status": "Normal"},
+                {"parameter": "Fasting Blood Glucose", "value": "92 mg/dL", "status": "Normal"}
+            ],
+            "doctor_notes": "All reported blood parameters are within standard physiological reference ranges. No indicators of acute infection or anemia detected.",
+            "recommendations": [
+                "Maintain healthy diet and hydration",
+                "Share this report with your physician during your next routine consultation"
+            ],
+            "important_alerts": []
+        }
+
+    prompt = f"""
+You are an expert medical report analysis assistant in a health platform.
+Analyze the following extracted text from a patient's medical document or lab report.
+
+STRICT INSTRUCTIONS:
+1. Explain findings in simple, easy-to-understand language that a patient can comprehend.
+2. Group key test parameters/vitals into 'key_findings' with parameter, value, and status ('Normal', 'Low', 'High', 'Abnormal', 'Attention').
+3. In 'doctor_notes', write a friendly 2-4 sentence summary of what the report means.
+4. Highlight any urgent or abnormal findings in 'important_alerts'.
+5. Provide actionable next steps or questions to ask the doctor in 'recommendations'.
+6. Respond ONLY with valid JSON in this exact structure:
+{{
+  "document_type": "...",
+  "patient_name": "...",
+  "report_date": "...",
+  "key_findings": [
+    {{"parameter": "...", "value": "...", "status": "Normal|Low|High|Abnormal|Attention"}}
+  ],
+  "doctor_notes": "...",
+  "recommendations": ["..."],
+  "important_alerts": ["..."]
+}}
+
+Document Text:
+{text[:4000]}
+""" + _lang_instruction(language)
+
+    response_text = _call_gemini([{"text": prompt}])
+    return _extract_json(response_text)
+
+
+def summarize_health_document_image(image_bytes: bytes, mime_type: str = "image/jpeg", language: str = "en") -> dict:
+    if config.is_demo_mode():
+        return summarize_health_document_text("", language)
+
+    prompt = f"""
+You are an expert medical report analysis assistant in a health platform.
+Analyze this medical document / prescription / lab test image.
+
+STRICT INSTRUCTIONS:
+1. Read the text from the image carefully.
+2. Explain findings in simple, easy-to-understand language.
+3. Group key test parameters or findings into 'key_findings' with parameter, value, and status ('Normal', 'Low', 'High', 'Abnormal', 'Attention').
+4. In 'doctor_notes', write a 2-4 sentence patient-friendly summary.
+5. Highlight any abnormal or urgent findings in 'important_alerts'.
+6. Provide actionable recommendations or questions to ask the doctor in 'recommendations'.
+7. Respond ONLY with valid JSON in this exact structure:
+{{
+  "document_type": "...",
+  "patient_name": "...",
+  "report_date": "...",
+  "key_findings": [
+    {{"parameter": "...", "value": "...", "status": "Normal|Low|High|Abnormal|Attention"}}
+  ],
+  "doctor_notes": "...",
+  "recommendations": ["..."],
+  "important_alerts": ["..."]
+}}
+""" + _lang_instruction(language)
+
+    encoded_image = base64.b64encode(image_bytes).decode("utf-8")
+    parts = [
+        {"inlineData": {"mimeType": mime_type, "data": encoded_image}},
+        {"text": prompt}
+    ]
+    response_text = _call_gemini(parts)
+    return _extract_json(response_text)
+
+
+# ---------------------------------------------------------------------------
+# MODULE 10: AI-Powered Medication Reminder Scheduling (Feature 3)
+# ---------------------------------------------------------------------------
+def generate_reminder_schedule(medicine_name: str, frequency: str, instructions: str = "",
+                               wake_time: str = "08:00", sleep_time: str = "22:00") -> dict:
+    default_times = {
+        "once_daily": ["09:00"],
+        "twice_daily": ["09:00", "21:00"],
+        "thrice_daily": ["08:00", "14:00", "20:00"],
+        "four_times_daily": ["08:00", "12:00", "16:00", "20:00"],
+        "as_needed": ["10:00"]
+    }
+    fallback_times = default_times.get(frequency, ["09:00"])
+
+    if config.is_demo_mode():
+        return {
+            "demo_mode": True,
+            "times": fallback_times,
+            "explanation": f"Standard schedule for {frequency.replace('_', ' ')} based on routine daytime hours.",
+            "tips": [
+                "Take with a full glass of water",
+                "Try to take at the same times each day for optimal adherence"
+            ]
+        }
+
+    prompt = f"""
+You are a smart clinical pharmacy assistant optimizing medication intake timing.
+Given a medicine name, prescribed frequency, and optional instructions, calculate the most effective and patient-friendly daily reminder times (24-hour format HH:MM).
+
+Inputs:
+- Medicine: {medicine_name}
+- Prescribed Frequency: {frequency}
+- Patient Instructions: {instructions or 'None specified'}
+- Patient Wake Time: {wake_time}
+- Patient Bed Time: {sleep_time}
+
+Rules:
+1. Ensure doses are evenly spaced between wake time and bed time unless food-specific (e.g., before breakfast, after dinner).
+2. 'times' MUST be an array of "HH:MM" 24-hour time strings corresponding to the frequency count.
+   - once_daily: 1 time
+   - twice_daily: 2 times
+   - thrice_daily: 3 times
+   - four_times_daily: 4 times
+   - as_needed: 1 recommended default time
+3. Provide a brief 1-2 sentence 'explanation' of why these times are optimal.
+4. Provide 2-3 helpful 'tips' for taking this medication.
+5. Respond ONLY with valid JSON:
+{{
+  "times": ["08:00", "20:00"],
+  "explanation": "...",
+  "tips": ["...", "..."]
+}}
+"""
+    try:
+        response_text = _call_gemini([{"text": prompt}])
+        result = _extract_json(response_text)
+        if "times" not in result or not isinstance(result["times"], list) or len(result["times"]) == 0:
+            result["times"] = fallback_times
+        result["demo_mode"] = False
+        return result
+    except Exception:
+        return {
+            "demo_mode": False,
+            "times": fallback_times,
+            "explanation": f"Recommended schedule for {frequency.replace('_', ' ')}.",
+            "tips": ["Take with a full glass of water", "Keep doses evenly spaced"]
+        }
+

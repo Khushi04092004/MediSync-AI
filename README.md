@@ -8,29 +8,26 @@ MediSync AI is an AI-assisted healthcare platform that simplifies prescription p
 
 ## Features
 
-- AI-powered Prescription OCR
-- Handwritten, Printed, PDF & QR Prescription Support
-- Medicine Verification Engine
-- Online Medicine Ordering
-- Medicine Inventory Management
-- AI Health Chatbot
-- OTC Self-Care Assistant
-- Secure Authentication (Admin & Customer)
-- Multi-language Support
-- Dark / Light Mode
+- **Doctor Appointment Booking System**: Search verified specialists, browse profiles and consultation fees, check real-time availability slots, and book/cancel appointments.
+- **Doctor Management Portal**: Dedicated portal for certified doctors to manage practice profiles, schedule clinical availability slots, and update consultation statuses with clinical notes.
+- **Digital Health Records Management**: Secure storage for medical reports (PDF/images), health profile tracking (blood group, vitals, allergies, emergency contacts), and patient health dashboard.
+- **AI-Powered Medical Report Summarization**: Integrated Google Gemini AI to analyze lab reports and extract key parameters into easy-to-understand findings, clinical explanations, and recommendations with medical disclaimers.
+- **AI-Powered Smart Medication Reminders**: Schedule daily dose alarms, track on-time adherence compliance with visual metrics, log doses as taken/skipped, and generate optimal dosing schedules using Gemini AI.
+- **Prescription OCR & Verification**: Handwritten, printed, digital PDF, and QR prescription scanning with multi-step medicine verification.
+- **Online Medicine Ordering & Inventory**: Browse pharmacy catalog, cart verification, order simulation, and stock management.
+- **AI Health Chatbot & OTC Self-Care Assistant**: Safe, cautious health assistance powered by Gemini.
+- **Role-Based Authentication**: Support for Customer, Doctor, and Admin accounts with token sessions.
+- **Multi-language Support & Dark/Light Mode**: Full localization across 5 languages with clean, responsive themes.
 
 ---
 
 ## Upcoming Features
 
-- Doctor Appointment Booking
 - Pathology & Lab Test Booking
-- My Health Records Dashboard
-- Medicine & Appointment Reminders
-- Doctor & Lab Admin Portal
-- Cloud Health Records
-- Online Payment Gateway
-- AI-Powered Smart Medicine Dispensing Machine
+- Cloud-Based Distributed Health Records
+- Real Online Payment Gateway (Razorpay)
+- Real Courier Tracking Integration (Shiprocket)
+- AI-Powered Smart Medicine Dispensing Machine (Hardware Kiosk)
 
 ---
 

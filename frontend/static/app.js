@@ -52,18 +52,25 @@ const LANGUAGE_NAMES = {
 function renderTopbar(active) {
   const el = document.getElementById("topbar");
   if (!el) return;
+  const user = JSON.parse(localStorage.getItem("medisync_user") || "null");
   const links = [
     ["index.html", "nav_home"],
     ["scan.html", "nav_scan"],
     ["selfcare.html", "nav_selfcare"],
+    ["doctors.html", "nav_doctors"],
+    ["appointments.html", "nav_appointments"],
+    ["health-records.html", "nav_health_records"],
+    ["reminders.html", "nav_reminders"],
     ["order.html", "nav_order"],
     ["inventory.html", "nav_inventory"],
     ["about.html", "nav_about"],
   ];
+  if (user && (user.role === "doctor" || user.role === "admin")) {
+    links.splice(5, 0, ["doctor-dashboard.html", "nav_doctor_dashboard"]);
+  }
   const lang = currentLang();
-  const user = JSON.parse(localStorage.getItem("medisync_user") || "null");
   el.innerHTML = `
-    <div class="brand"><span class="dot"></span> MediSync AI</div>
+    <div class="brand"><a href="index.html" style="color:inherit;display:flex;align-items:center;gap:8px;"><span class="dot"></span> MediSync AI</a></div>
     <nav>${links.map(([href, key]) =>
       `<a href="${href}" class="${active === href ? "active" : ""}" data-i18n="${key}"></a>`).join("")}
       <button class="theme-toggle-btn" id="theme-toggle" type="button" title="Toggle theme">🌙</button>
@@ -77,10 +84,15 @@ function renderTopbar(active) {
       ${user ? `
         <div class="lang-switch">
           <button class="lang-btn" id="user-toggle" type="button">👤 ${user.name.split(" ")[0]}</button>
-          <div class="lang-menu hidden" id="user-menu">
-            <div id="logout-option" data-i18n="logout_btn"></div>
+          <div class="lang-menu hidden" id="user-menu" style="min-width: 170px;">
+            <div style="padding: 6px 12px; font-size: 11px; opacity: 0.7; text-transform: uppercase;">Role: ${user.role}</div>
+            <a href="appointments.html" style="display:block; padding:8px 12px; color:inherit; text-decoration:none;">📅 Appointments</a>
+            <a href="health-records.html" style="display:block; padding:8px 12px; color:inherit; text-decoration:none;">📁 Health Records</a>
+            <a href="reminders.html" style="display:block; padding:8px 12px; color:inherit; text-decoration:none;">⏰ Reminders</a>
+            ${user.role === 'doctor' || user.role === 'admin' ? `<a href="doctor-dashboard.html" style="display:block; padding:8px 12px; color:inherit; text-decoration:none;">🩺 Doctor Portal</a>` : ''}
+            <div id="logout-option" data-i18n="logout_btn" style="border-top:1px solid var(--line); margin-top:4px;"></div>
           </div>
-        </div>` : ""}
+        </div>` : `<a href="login.html" class="btn" style="padding:4px 12px; font-size:13px;" data-i18n="login_btn">Login</a>`}
     </nav>
   `;
 

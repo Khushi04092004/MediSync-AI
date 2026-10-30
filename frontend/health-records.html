@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Health Records — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <div class="hero-wrap">
+    <div class="bg-blobs"></div>
+    <div class="hero-content">
+      <span class="eyebrow">Module 5</span>
+      <h1>Digital Health Records</h1>
+      <p class="subtitle">Securely store your medical reports, track your personal health vitals, and let Gemini AI explain complex lab test results in simple terms.</p>
+    </div>
+  </div>
+
+  <div class="tabs-nav">
+    <button class="tab-btn active" data-tab="tab-records">📁 My Health Records</button>
+    <button class="tab-btn" data-tab="tab-profile">👤 Health Profile & Vitals</button>
+    <button class="tab-btn" data-tab="tab-dashboard">📊 Health Dashboard</button>
+  </div>
+
+  <!-- TAB 1: Records & AI Summaries -->
+  <div id="tab-records" class="tab-content">
+    <!-- Upload Form Card -->
+    <div class="card reveal" style="margin-bottom: 24px;">
+      <h3 style="margin-bottom: 6px;">Upload New Medical Document</h3>
+      <p style="color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 18px;">
+        Upload lab reports, prescriptions, discharge summaries, or scans (PDF, JPG, PNG up to 10MB).
+      </p>
+
+      <form id="upload-record-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; align-items: flex-end;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Select File (PDF or Image)</label>
+          <input type="file" id="record-file" accept=".pdf,image/png,image/jpeg,image/webp" required style="width: 100%; margin: 0; padding: 7px;">
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Document Category</label>
+          <select id="record-category" style="width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); margin: 0;">
+            <option value="Lab Report">Lab Report</option>
+            <option value="Blood Test">Blood Test</option>
+            <option value="Prescription">Prescription</option>
+            <option value="X-Ray / Scan">X-Ray / Scan</option>
+            <option value="Discharge Summary">Discharge Summary</option>
+            <option value="Vaccination">Vaccination</option>
+            <option value="Insurance">Insurance</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <button type="submit" id="upload-btn" class="btn" style="width: 100%; padding: 10px;">📤 Upload Record</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- AI Summary Display Modal / Container -->
+    <div id="ai-summary-container" class="hidden" style="margin-bottom: 24px;">
+      <div class="card ai-summary-box">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <span class="spec-tag" style="background: var(--safe-bg); color: var(--safe); font-size: 0.85rem;">🤖 Gemini AI Document Summary</span>
+            <h3 id="summary-doc-type" style="margin: 8px 0 4px 0;">Medical Report</h3>
+            <p id="summary-meta" style="font-size: 0.85rem; color: var(--ink-soft); margin: 0;"></p>
+          </div>
+          <button id="close-summary-btn" class="btn secondary" style="padding: 4px 10px; font-size: 14px;">✕ Close</button>
+        </div>
+
+        <div id="summary-alerts-box" class="hidden" style="margin-top: 14px; background: var(--blocked-bg); color: var(--blocked); padding: 10px 14px; border-radius: var(--radius); font-size: 0.88rem;">
+          <strong>⚠️ Attention Required:</strong>
+          <ul id="summary-alerts-list" style="margin: 4px 0 0 18px; padding: 0;"></ul>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <h4 style="margin-bottom: 6px; font-size: 0.95rem;">Key Findings & Parameters:</h4>
+          <div style="overflow-x: auto;">
+            <table id="summary-findings-table">
+              <thead>
+                <tr>
+                  <th>Test / Parameter</th>
+                  <th>Observed Value</th>
+                  <th>Clinical Status</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <h4 style="margin-bottom: 4px; font-size: 0.95rem;">Doctor's Explanation:</h4>
+          <p id="summary-doctor-notes" style="font-size: 0.9rem; color: var(--ink); margin: 0; line-height: 1.6;"></p>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <h4 style="margin-bottom: 4px; font-size: 0.95rem;">Recommended Next Steps:</h4>
+          <ul id="summary-recommendations" style="font-size: 0.9rem; color: var(--ink-soft); margin: 0 0 0 18px; padding: 0; line-height: 1.6;"></ul>
+        </div>
+
+        <div style="margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--ink-soft); font-style: italic;" id="summary-disclaimer">
+          ⚠️ AI DISCLAIMER: Generated for informational purposes only. Always consult a certified doctor for medical decisions.
+        </div>
+      </div>
+    </div>
+
+    <!-- Uploaded Records List -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <h3 style="margin: 0;">Your Medical Files</h3>
+      <span id="record-count-badge" style="font-size: 0.85rem; color: var(--ink-soft);">0 records</span>
+    </div>
+    <div id="records-list">
+      <div class="card" style="text-align: center; padding: 40px;">
+        <span class="spinner" style="display:inline-block; margin-bottom: 12px;"></span>
+        <p>Loading your health records...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Health Profile -->
+  <div id="tab-profile" class="tab-content hidden">
+    <div class="card" style="max-width: 680px; margin: 0 auto;">
+      <h3 style="margin-bottom: 6px;">Patient Health Profile</h3>
+      <p style="color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 22px;">
+        This profile helps physicians and emergency responders understand your medical history.
+      </p>
+
+      <form id="health-profile-form">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Date of Birth</label>
+            <input type="date" id="prof-dob" style="width: 100%; margin: 0;">
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Blood Group</label>
+            <select id="prof-blood" style="width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); margin: 0;">
+              <option value="">Select Blood Group</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Gender</label>
+          <select id="prof-gender" style="width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); margin: 0;">
+            <option value="">Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Emergency Contact Name</label>
+            <input type="text" id="prof-emg-name" placeholder="Name of family member / friend" style="width: 100%; margin: 0;">
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Emergency Contact Phone</label>
+            <input type="tel" id="prof-emg-phone" placeholder="+91 9876543210" style="width: 100%; margin: 0;">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Known Drug / Food Allergies</label>
+          <input type="text" id="prof-allergies" placeholder="e.g. Penicillin, Peanuts, Sulfa drugs, None" style="width: 100%; margin: 0;">
+        </div>
+
+        <div style="margin-bottom: 22px;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Existing Medical Conditions / History</label>
+          <textarea id="prof-conditions" rows="3" placeholder="e.g. Hypertension, Type 2 Diabetes, Asthma, None" style="width: 100%; margin: 0;"></textarea>
+        </div>
+
+        <button type="submit" id="save-profile-btn" class="btn" style="padding: 10px 24px;">Save Health Profile</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TAB 3: Dashboard Overview -->
+  <div id="tab-dashboard" class="tab-content hidden">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="stat-pill reveal">
+        <div style="font-size: 26px;">📁</div>
+        <div>
+          <div class="stat-value" id="dash-total-records">0</div>
+          <div style="font-size: 0.85rem; color: var(--ink-soft);">Total Uploaded Records</div>
+        </div>
+      </div>
+      <div class="stat-pill reveal">
+        <div style="font-size: 26px;">💊</div>
+        <div>
+          <div class="stat-value" id="dash-active-meds" style="color: var(--brand-mid);">0</div>
+          <div style="font-size: 0.85rem; color: var(--ink-soft);">Active Prescriptions</div>
+        </div>
+      </div>
+      <div class="stat-pill reveal">
+        <div style="font-size: 26px;">🩺</div>
+        <div>
+          <div class="stat-value" id="dash-upcoming-appts" style="color: var(--safe);">0</div>
+          <div style="font-size: 0.85rem; color: var(--ink-soft);">Upcoming Visits</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+      <div class="card">
+        <h3 style="margin-bottom: 12px;">Recent Health Uploads</h3>
+        <div id="dash-recent-list" style="font-size: 0.9rem;">
+          <p style="color: var(--ink-soft);">Loading recent files...</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom: 12px;">Upcoming Doctor Appointments</h3>
+        <div id="dash-appts-list" style="font-size: 0.9rem;">
+          <p style="color: var(--ink-soft);">Loading upcoming appointments...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+let healthRecords = [];
+
+async function init() {
+  await requireAuthOrRedirect();
+  renderTopbar("health-records.html");
+  applyTranslations();
+  renderBgBlobs();
+
+  // Tab switching
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).classList.remove("hidden");
+      if (btn.dataset.tab === "tab-dashboard") loadDashboard();
+    });
+  });
+
+  document.getElementById("upload-record-form").addEventListener("submit", handleUploadRecord);
+  document.getElementById("health-profile-form").addEventListener("submit", handleSaveProfile);
+  document.getElementById("close-summary-btn").addEventListener("click", () => {
+    document.getElementById("ai-summary-container").classList.add("hidden");
+  });
+
+  await loadRecords();
+  await loadProfile();
+}
+
+async function loadRecords() {
+  const container = document.getElementById("records-list");
+  try {
+    const res = await apiCall("/health/records");
+    healthRecords = res.records || [];
+    document.getElementById("record-count-badge").textContent = `${healthRecords.length} records`;
+
+    if (!healthRecords.length) {
+      container.innerHTML = `
+        <div class="card" style="text-align: center; padding: 48px 20px;">
+          <div style="font-size: 40px; margin-bottom: 12px;">📁</div>
+          <h3>No Health Documents Uploaded</h3>
+          <p style="color: var(--ink-soft); max-width: 400px; margin: 0 auto;">
+            Upload your blood tests, X-rays, or prescriptions above to organize them securely and get AI summaries.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = healthRecords.map(r => {
+      const isPdf = (r.mime_type || '').includes('pdf') || r.original_filename.toLowerCase().endsWith('.pdf');
+      const icon = isPdf ? '📄' : '🖼️';
+      const sizeKb = Math.round(r.file_size / 1024);
+      const dateStr = (r.uploaded_at || '').split('T')[0];
+
+      return `
+        <div class="record-item reveal in-view">
+          <div class="record-meta">
+            <div class="record-icon">${icon}</div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <strong style="font-size: 1rem;">${escapeHtml(r.original_filename)}</strong>
+                <span class="spec-tag">${escapeHtml(r.category || 'General')}</span>
+              </div>
+              <div style="font-size: 0.85rem; color: var(--ink-soft); margin-top: 4px;">
+                <span>📅 Uploaded: ${dateStr}</span> &nbsp;•&nbsp;
+                <span>💾 Size: ${sizeKb} KB</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button class="btn summarize-btn" data-id="${r.id}" style="padding: 6px 12px; font-size: 13px;">🤖 AI Summarize</button>
+            <a href="${r.download_url}" target="_blank" class="btn secondary" style="padding: 6px 12px; font-size: 13px;">⬇ Download</a>
+            <button class="btn secondary delete-btn" data-id="${r.id}" style="color: var(--blocked); border-color: rgba(199,64,90,0.3); padding: 6px 10px; font-size: 13px;">✕</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    container.querySelectorAll(".summarize-btn").forEach(btn => {
+      btn.addEventListener("click", () => handleSummarize(parseInt(btn.dataset.id), btn));
+    });
+
+    container.querySelectorAll(".delete-btn").forEach(btn => {
+      btn.addEventListener("click", () => handleDeleteRecord(parseInt(btn.dataset.id)));
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="card" style="color: var(--blocked);"><p>${err.message}</p></div>`;
+  }
+}
+
+async function handleUploadRecord(e) {
+  e.preventDefault();
+  const fileInput = document.getElementById("record-file");
+  const category = document.getElementById("record-category").value;
+  if (!fileInput.files.length) {
+    toast("Please choose a file to upload", "error");
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("category", category);
+
+  const btn = document.getElementById("upload-btn");
+  btn.disabled = true;
+  btn.textContent = "Uploading...";
+
+  try {
+    await apiCall("/health/records", {
+      method: "POST",
+      body: formData
+    });
+    toast("Document uploaded successfully!", "info");
+    document.getElementById("upload-record-form").reset();
+    await loadRecords();
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "📤 Upload Record";
+  }
+}
+
+async function handleSummarize(recordId, btnEl) {
+  const origText = btnEl.textContent;
+  btnEl.disabled = true;
+  btnEl.textContent = "Analyzing...";
+
+  const summaryBox = document.getElementById("ai-summary-container");
+  summaryBox.classList.remove("hidden");
+  summaryBox.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  document.getElementById("summary-doc-type").textContent = "AI is analyzing document...";
+  document.getElementById("summary-doctor-notes").textContent = "Extracting clinical findings and running Gemini evaluation...";
+  document.querySelector("#summary-findings-table tbody").innerHTML = `<tr><td colspan="3" style="text-align:center; padding:18px;">Reading document contents...</td></tr>`;
+
+  try {
+    const res = await apiCall(`/health/records/${recordId}/summarize`, { method: "POST" });
+    const s = res.summary;
+
+    if (!s) {
+      document.getElementById("summary-doc-type").textContent = "Notice";
+      document.getElementById("summary-doctor-notes").textContent = res.message || "Could not parse document.";
+      return;
+    }
+
+    document.getElementById("summary-doc-type").textContent = s.document_type || "Medical Analysis";
+    document.getElementById("summary-meta").textContent = `Patient: ${s.patient_name || 'N/A'} • Report Date: ${s.report_date || 'N/A'}`;
+    document.getElementById("summary-doctor-notes").textContent = s.doctor_notes || "No additional notes.";
+
+    // Alerts
+    const alertsBox = document.getElementById("summary-alerts-box");
+    const alertsList = document.getElementById("summary-alerts-list");
+    if (s.important_alerts && s.important_alerts.length) {
+      alertsBox.classList.remove("hidden");
+      alertsList.innerHTML = s.important_alerts.map(a => `<li>${escapeHtml(a)}</li>`).join("");
+    } else {
+      alertsBox.classList.add("hidden");
+    }
+
+    // Findings Table
+    const tbody = document.querySelector("#summary-findings-table tbody");
+    if (s.key_findings && s.key_findings.length) {
+      tbody.innerHTML = s.key_findings.map(f => {
+        let badgeColor = "var(--safe-bg); color: var(--safe);";
+        const st = (f.status || "").toLowerCase();
+        if (st.includes("high") || st.includes("abnormal") || st.includes("attention")) {
+          badgeColor = "var(--caution-bg); color: var(--caution);";
+        } else if (st.includes("critical") || st.includes("alert")) {
+          badgeColor = "var(--blocked-bg); color: var(--blocked);";
+        }
+        return `
+          <tr>
+            <td><strong>${escapeHtml(f.parameter)}</strong></td>
+            <td>${escapeHtml(f.value)}</td>
+            <td><span class="spec-tag" style="background:${badgeColor}">${escapeHtml(f.status || 'Normal')}</span></td>
+          </tr>
+        `;
+      }).join("");
+    } else {
+      tbody.innerHTML = `<tr><td colspan="3" style="color:var(--ink-soft);">No specific tabular vitals detected.</td></tr>`;
+    }
+
+    // Recommendations
+    const recsList = document.getElementById("summary-recommendations");
+    if (s.recommendations && s.recommendations.length) {
+      recsList.innerHTML = s.recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join("");
+    } else {
+      recsList.innerHTML = `<li>Follow physician recommendations.</li>`;
+    }
+
+    if (res.disclaimer) {
+      document.getElementById("summary-disclaimer").textContent = res.disclaimer;
+    }
+  } catch (err) {
+    toast(err.message, "error");
+    document.getElementById("summary-doctor-notes").textContent = `Analysis failed: ${err.message}`;
+  } finally {
+    btnEl.disabled = false;
+    btnEl.textContent = origText;
+  }
+}
+
+async function handleDeleteRecord(recordId) {
+  if (!confirm("Are you sure you want to permanently delete this health record?")) return;
+  try {
+    await apiCall(`/health/records/${recordId}`, { method: "DELETE" });
+    toast("Record deleted", "info");
+    await loadRecords();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function loadProfile() {
+  try {
+    const res = await apiCall("/health/profile");
+    if (res.profile) {
+      const p = res.profile;
+      document.getElementById("prof-dob").value = p.date_of_birth || "";
+      document.getElementById("prof-blood").value = p.blood_group || "";
+      document.getElementById("prof-gender").value = p.gender || "";
+      document.getElementById("prof-emg-name").value = p.emergency_contact_name || "";
+      document.getElementById("prof-emg-phone").value = p.emergency_contact_phone || "";
+      document.getElementById("prof-allergies").value = p.known_allergies || "";
+      document.getElementById("prof-conditions").value = p.existing_conditions || "";
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function handleSaveProfile(e) {
+  e.preventDefault();
+  const btn = document.getElementById("save-profile-btn");
+  btn.disabled = true;
+
+  try {
+    await apiCall("/health/profile", {
+      method: "PUT",
+      body: JSON.stringify({
+        date_of_birth: document.getElementById("prof-dob").value,
+        blood_group: document.getElementById("prof-blood").value,
+        gender: document.getElementById("prof-gender").value,
+        emergency_contact_name: document.getElementById("prof-emg-name").value.trim(),
+        emergency_contact_phone: document.getElementById("prof-emg-phone").value.trim(),
+        known_allergies: document.getElementById("prof-allergies").value.trim(),
+        existing_conditions: document.getElementById("prof-conditions").value.trim()
+      })
+    });
+    toast("Health profile updated successfully!", "info");
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadDashboard() {
+  try {
+    const data = await apiCall("/health/dashboard");
+    document.getElementById("dash-total-records").textContent = data.total_records || 0;
+    document.getElementById("dash-active-meds").textContent = data.active_medications || 0;
+    document.getElementById("dash-upcoming-appts").textContent = (data.upcoming_appointments || []).length;
+
+    // Recent uploads
+    const recentCont = document.getElementById("dash-recent-list");
+    if (data.recent_uploads && data.recent_uploads.length) {
+      recentCont.innerHTML = data.recent_uploads.map(r => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line);">
+          <span>📄 ${escapeHtml(r.original_filename)}</span>
+          <span class="spec-tag">${escapeHtml(r.category)}</span>
+        </div>
+      `).join("");
+    } else {
+      recentCont.innerHTML = `<p style="color:var(--ink-soft);">No recent uploads.</p>`;
+    }
+
+    // Upcoming appts
+    const apptsCont = document.getElementById("dash-appts-list");
+    if (data.upcoming_appointments && data.upcoming_appointments.length) {
+      apptsCont.innerHTML = data.upcoming_appointments.map(a => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line);">
+          <div>
+            <strong>👨‍⚕️ ${escapeHtml(a.doctor_name)}</strong> (${escapeHtml(a.specialization)})
+            <div style="font-size:0.8rem; color:var(--ink-soft);">📅 ${a.appointment_date} at ${a.appointment_time}</div>
+          </div>
+          <span class="badge-status ${a.status.toLowerCase()}">${a.status}</span>
+        </div>
+      `).join("");
+    } else {
+      apptsCont.innerHTML = `<p style="color:var(--ink-soft);">No upcoming doctor visits.</p>`;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+init();
+</script>
+</body>
+</html>

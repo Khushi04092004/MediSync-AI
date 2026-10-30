@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find Doctors — MediSync AI</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="topbar" class="topbar"></div>
+
+<div class="page">
+  <div class="hero-wrap">
+    <div class="bg-blobs"></div>
+    <div class="hero-content">
+      <span class="eyebrow">Module 3</span>
+      <h1>Find Verified Doctors</h1>
+      <p class="subtitle">Search qualified specialists, view experience & consultation fees, and book guaranteed appointment slots instantly.</p>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="card reveal" style="margin-bottom: 24px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;">
+      <div style="flex: 1; min-width: 240px; position: relative;">
+        <input type="text" id="doctor-search" placeholder="Search doctor name or specialization..." style="width: 100%; margin: 0; padding-left: 36px;">
+        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.5;">🔍</span>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="spec-filters">
+        <button class="btn secondary active-filter" data-spec="" style="padding: 6px 14px; font-size: 13px;">All Specialties</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Doctors List Grid -->
+  <div id="doctors-container" class="doctors-grid">
+    <div class="card" style="grid-column: 1/-1; text-align: center; padding: 40px;">
+      <span class="spinner" style="display:inline-block; margin-bottom: 12px;"></span>
+      <p>Loading certified doctors...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Booking Modal -->
+<div id="booking-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+      <div>
+        <h3 id="modal-doctor-name" style="margin: 0;">Book Appointment</h3>
+        <p id="modal-doctor-spec" style="margin: 4px 0 0; color: var(--brand-mid); font-weight: 600; font-size: 0.9rem;"></p>
+      </div>
+      <button id="modal-close" class="btn secondary" style="padding: 4px 10px; font-size: 16px; line-height: 1;">✕</button>
+    </div>
+
+    <div style="background: var(--surface-sunken); padding: 12px 16px; border-radius: var(--radius); margin-bottom: 18px; font-size: 0.9rem;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <span style="color: var(--ink-soft);">Consultation Fee:</span>
+        <strong id="modal-doctor-fee" style="color: var(--brand);">₹500</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: var(--ink-soft);">Experience:</span>
+        <span id="modal-doctor-exp"></span>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px;">Select Available Date & Slot:</label>
+      <div id="slots-list" class="slots-container">
+        <p style="font-size: 0.85rem; color: var(--ink-soft);">Fetching available slots...</p>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <label for="booking-reason" style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px;">Reason for Consultation (Optional):</label>
+      <textarea id="booking-reason" rows="2" placeholder="Briefly describe your symptoms or reason for visit..." style="width: 100%;"></textarea>
+    </div>
+
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button id="modal-cancel-btn" class="btn secondary" type="button">Cancel</button>
+      <button id="modal-confirm-btn" class="btn" type="button" disabled>Confirm & Book</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer" data-i18n="footer_tagline"></footer>
+<script src="static/i18n.js"></script>
+<script src="static/app.js"></script>
+<script>
+let allDoctors = [];
+let selectedDoctor = null;
+let selectedSlot = null;
+
+async function init() {
+  await requireAuthOrRedirect();
+  renderTopbar("doctors.html");
+  applyTranslations();
+  renderBgBlobs();
+  initScrollReveal();
+
+  await loadDoctors();
+
+  document.getElementById("doctor-search").addEventListener("input", filterDoctors);
+  document.getElementById("modal-close").addEventListener("click", closeModal);
+  document.getElementById("modal-cancel-btn").addEventListener("click", closeModal);
+  document.getElementById("modal-confirm-btn").addEventListener("click", confirmBooking);
+}
+
+async function loadDoctors() {
+  try {
+    const data = await apiCall("/doctors");
+    allDoctors = data.doctors || [];
+    renderSpecializationFilters(data.specializations || []);
+    renderDoctorCards(allDoctors);
+  } catch (err) {
+    document.getElementById("doctors-container").innerHTML = `
+      <div class="card" style="grid-column: 1/-1; text-align: center; color: var(--blocked);">
+        <p>Failed to load doctors: ${err.message}</p>
+      </div>
+    `;
+  }
+}
+
+function renderSpecializationFilters(specs) {
+  const container = document.getElementById("spec-filters");
+  container.innerHTML = `<button class="btn active-filter" data-spec="" style="padding: 6px 14px; font-size: 13px;">All Specialties</button>`;
+  specs.forEach(spec => {
+    const btn = document.createElement("button");
+    btn.className = "btn secondary";
+    btn.style.padding = "6px 14px";
+    btn.style.fontSize = "13px";
+    btn.dataset.spec = spec;
+    btn.textContent = spec;
+    container.appendChild(btn);
+  });
+
+  container.querySelectorAll("button").forEach(b => {
+    b.addEventListener("click", () => {
+      container.querySelectorAll("button").forEach(btn => btn.classList.add("secondary"));
+      b.classList.remove("secondary");
+      filterDoctors();
+    });
+  });
+}
+
+function filterDoctors() {
+  const search = document.getElementById("doctor-search").value.toLowerCase().trim();
+  const activeBtn = document.querySelector("#spec-filters button:not(.secondary)");
+  const spec = activeBtn ? activeBtn.dataset.spec.toLowerCase() : "";
+
+  const filtered = allDoctors.filter(d => {
+    const matchSearch = d.name.toLowerCase().includes(search) || (d.specialization || "").toLowerCase().includes(search);
+    const matchSpec = !spec || (d.specialization || "").toLowerCase() === spec;
+    return matchSearch && matchSpec;
+  });
+
+  renderDoctorCards(filtered);
+}
+
+function renderDoctorCards(doctors) {
+  const container = document.getElementById("doctors-container");
+  if (!doctors.length) {
+    container.innerHTML = `
+      <div class="card" style="grid-column: 1/-1; text-align: center; padding: 40px;">
+        <p style="color: var(--ink-soft);">No doctors match your criteria.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = doctors.map(doc => `
+    <div class="doctor-card reveal in-view">
+      <div class="doctor-header">
+        <div class="doctor-avatar">👨‍⚕️</div>
+        <div class="doctor-info" style="flex: 1;">
+          <h3>${escapeHtml(doc.name)}</h3>
+          <span class="spec-tag">${escapeHtml(doc.specialization || "General")}</span>
+          <div style="font-size: 0.85rem; color: var(--ink-soft); margin-top: 4px;">
+            ${escapeHtml(doc.qualifications || "MBBS")} • ${doc.experience_years || 0} yrs exp
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size: 0.9rem; color: var(--ink-soft); margin: 0 0 16px 0; flex: 1;">
+        ${escapeHtml(doc.description || "Experienced healthcare practitioner dedicated to comprehensive patient care.")}
+      </p>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 14px;">
+        <div>
+          <span style="font-size: 0.75rem; color: var(--ink-soft); display: block;">Consultation Fee</span>
+          <strong style="color: var(--brand); font-size: 1.1rem;">₹${doc.consultation_fee || 500}</strong>
+        </div>
+        <button class="btn book-btn" data-doc-id="${doc.id}" style="padding: 8px 16px; font-size: 13px;">Book Slot</button>
+      </div>
+    </div>
+  `).join("");
+
+  container.querySelectorAll(".book-btn").forEach(btn => {
+    btn.addEventListener("click", () => openBookingModal(parseInt(btn.dataset.docId)));
+  });
+}
+
+async function openBookingModal(docId) {
+  selectedDoctor = allDoctors.find(d => d.id === docId);
+  if (!selectedDoctor) return;
+  selectedSlot = null;
+
+  document.getElementById("modal-doctor-name").textContent = selectedDoctor.name;
+  document.getElementById("modal-doctor-spec").textContent = selectedDoctor.specialization;
+  document.getElementById("modal-doctor-fee").textContent = `₹${selectedDoctor.consultation_fee || 500}`;
+  document.getElementById("modal-doctor-exp").textContent = `${selectedDoctor.experience_years || 0} years`;
+  document.getElementById("booking-reason").value = "";
+  document.getElementById("modal-confirm-btn").disabled = true;
+
+  const slotsContainer = document.getElementById("slots-list");
+  slotsContainer.innerHTML = `<span class="spinner" style="display:inline-block;"></span> Loading available slots...`;
+  document.getElementById("booking-modal").classList.remove("hidden");
+
+  try {
+    const res = await apiCall(`/doctors/${docId}/availability`);
+    const slots = res.slots || [];
+    if (!slots.length) {
+      slotsContainer.innerHTML = `<p style="color: var(--ink-soft); font-size: 0.85rem;">No upcoming time slots currently listed for this doctor.</p>`;
+      return;
+    }
+
+    slotsContainer.innerHTML = slots.map(s => `
+      <button class="slot-chip ${s.booked ? 'booked' : ''}" data-slot-id="${s.id}" data-date="${s.available_date}" data-time="${s.start_time}" ${s.booked ? 'disabled' : ''}>
+        📅 ${s.available_date} — ⏰ ${s.start_time} - ${s.end_time}
+      </button>
+    `).join("");
+
+    slotsContainer.querySelectorAll(".slot-chip:not(.booked)").forEach(chip => {
+      chip.addEventListener("click", () => {
+        slotsContainer.querySelectorAll(".slot-chip").forEach(c => c.classList.remove("selected"));
+        chip.classList.add("selected");
+        selectedSlot = {
+          id: parseInt(chip.dataset.slotId),
+          date: chip.dataset.date,
+          time: chip.dataset.time
+        };
+        document.getElementById("modal-confirm-btn").disabled = false;
+      });
+    });
+  } catch (err) {
+    slotsContainer.innerHTML = `<p style="color: var(--blocked); font-size: 0.85rem;">Error loading slots: ${err.message}</p>`;
+  }
+}
+
+function closeModal() {
+  document.getElementById("booking-modal").classList.add("hidden");
+  selectedDoctor = null;
+  selectedSlot = null;
+}
+
+async function confirmBooking() {
+  if (!selectedDoctor || !selectedSlot) return;
+  const reason = document.getElementById("booking-reason").value.trim();
+  const btn = document.getElementById("modal-confirm-btn");
+  btn.disabled = true;
+  btn.textContent = "Booking...";
+
+  try {
+    const res = await apiCall("/appointments", {
+      method: "POST",
+      body: JSON.stringify({
+        doctor_id: selectedDoctor.id,
+        availability_id: selectedSlot.id,
+        appointment_date: selectedSlot.date,
+        appointment_time: selectedSlot.time,
+        reason: reason
+      })
+    });
+
+    toast("Appointment booked successfully! Booking Reference: " + res.appointment_uid, "info");
+    closeModal();
+    setTimeout(() => {
+      window.location.href = "appointments.html";
+    }, 1200);
+  } catch (err) {
+    toast(err.message, "error");
+    btn.disabled = false;
+    btn.textContent = "Confirm & Book";
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+init();
+</script>
+</body>
+</html>

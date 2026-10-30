@@ -32,6 +32,9 @@ import orders
 import config
 import auth
 import qr_decode
+import appointments
+import health_records
+import medications
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -46,6 +49,11 @@ app.add_middleware(
 )
 
 database.init_db()
+
+# Mount feature routers
+app.include_router(appointments.router)
+app.include_router(health_records.router)
+app.include_router(medications.router)
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
